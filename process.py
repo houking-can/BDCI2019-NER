@@ -30,21 +30,21 @@ def read_train():
 
 def get_sentences(text):
     sentences = []
-    tmp = re.split('。|！|\!|\.|？|\?', text)
+    tmp = re.split('。|！|\!|？|\?', text)
     for sent in tmp:
-        if len(sent) > 126:
+        if len(sent) > 62:
             sentences.extend(re.split(',|，', sent))
         else:
             sentences.append(sent)
     return sentences
 
 
-def gen_dataset():
+def gen_train():
     train_df = read_train()
-    test_df = read_test()
     with codecs.open('./data/train.txt', 'w') as up:
         for row in train_df.iloc[:-300].itertuples():
-            for sent in get_sentences(row.text):
+            sentences = get_sentences(row.text)
+            for sent in sentences:
                 if len(sent) < 2:
                     continue
                 entities = str(row.unknownEntities).split(';')
@@ -79,15 +79,27 @@ def gen_dataset():
                         up.write('{0} {1}\n'.format(c1, 'O'))
                 up.write('\n')
 
+
+def gen_test():
+    test_df = read_test()
+    span = []
     with codecs.open('./data/test.txt', 'w') as up:
         for row in test_df.iloc[:].itertuples():
-            for sent in get_sentences(row.text):
+            sentences = get_sentences(row.text)
+            span.append(str(row.id) + ' ' + str(len(sentences)))
+            for sent in sentences:
                 for c1 in sent:
                     up.write('{0} {1}\n'.format(c1, 'O'))
                 up.write('\n')
+    with open('./data/span.txt', 'w') as f:
+        f.write('\n'.join(span))
 
 
 def filter_word(w):
+    w = w.replace('…', '')
+    if len(w) == 1:
+        return ''
+
     for bad_word in ['？', '《', '🔺', '️?', '!', '#', '%', '%', '，', 'Ⅲ', '》', '丨', '、', '）', '（', '​',
                      '👍', '。', '😎', '/', '】', '-', '⚠️', '：', '✅', '㊙️', '“', '”', ')', '(', '！', '🔥', ',']:
         if bad_word in w:
@@ -96,45 +108,40 @@ def filter_word(w):
 
 
 def gen_csv():
-    test_pred = codecs.open('./output/result_dir/label_test.txt').readlines()
-    test_df = read_test()
-    pred_tag = []
-    pred_word = []
+    predict = codecs.open('./output/label_test.txt').read().split('\n\n')
+    spans = codecs.open('./data/span.txt').read().split('\n')
+    res = codecs.open('./output/res.csv', 'w')
+    res.write('id,unknownEntities\n')
 
-    pred_line_tag = ''
-    pred_line_word = ''
+    start = 0
+    for line in spans:
+        id, length = line.split()
+        length = int(length)
+        sample = predict[start:start + length]
+        unknown_entities = set()
+        for sent in sample:
+            sent = sent.split('\n')
+            entity = ''
+            for each in sent:
+                if each == '':
+                    continue
+                word, _, tag = each.split()
+                if tag == 'B-ORG':
+                    entity = word
+                elif tag == 'I-ORG':
+                    entity += word
+                else:
+                    entity = filter_word(entity)
+                    if entity != '':
+                        unknown_entities.add(entity)
+                    if tag == 'B-ORG':
+                        entity = word
+                    else:
+                        entity = ''
 
-    for line in test_pred:
-        line = line.strip()
-
-        if len(line) == 0 or line == '':
-            pred_tag.append(pred_line_tag)
-            pred_word.append(pred_line_word)
-            pred_line_tag = ''
-            pred_line_word = ''
-            continue
-
-        c, _, tag = line.split(' ')
-
-        if tag != 'O':
-            tag = tag[1:]
-            pred_line_word += c
-        else:
-            pred_line_word += ';'
-
-        pred_line_tag += tag
-
-    with codecs.open('baseline2.csv', 'w') as up:
-        up.write('id,unknownEntities\n')
-        for word, id in zip(pred_word, test_df['id'].values):
-            word = set([filter_word(x) for x in word.split(';') if x not in ['', ';'] and len(x) > 1])
-            word = [x for x in word if x != '']
-
-            if len(word) == 0:
-                word = ['我们']
-
-            word = ';'.join(list(word))
-            up.write('{0},{1}\n'.format(id, word))
+        start += length
+        res.write('{0},{1}\n'.format(id, ';'.join(list(unknown_entities))))
+    res.close()
 
 
 def process_train(build_dict=True):
@@ -215,4 +222,6 @@ def clean(line):
 if __name__ == "__main__":
     # process_train()
     # process_test()
-    gen_dataset()
+    # gen_train()
+    # gen_test()
+    gen_csv()

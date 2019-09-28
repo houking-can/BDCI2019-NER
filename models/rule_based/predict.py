@@ -1,7 +1,7 @@
 import csv
 import json
 from tqdm import tqdm
-from preprocess import process_test
+from process import process_test
 
 punctuation = open('./data/punctuation.txt', encoding='utf-8').read().split()
 
