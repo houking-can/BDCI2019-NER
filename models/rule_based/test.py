@@ -1,4 +1,4 @@
-lines = open('./res.csv',encoding='utf-8').read().split()
+lines = open('./res_without_filter.csv',encoding='utf-8').read().split()
 tmp = []
 tmp.append(lines[0])
 for line in lines[1:]:

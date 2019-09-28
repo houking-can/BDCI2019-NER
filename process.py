@@ -82,65 +82,71 @@ def gen_train():
 
 def gen_test():
     test_df = read_test()
-    span = []
+    # span = []
     with codecs.open('./data/test.txt', 'w') as up:
         for row in test_df.iloc[:].itertuples():
             sentences = get_sentences(row.text)
-            span.append(str(row.id) + ' ' + str(len(sentences)))
+            # span.append(str(row.id) + ' ' + str(len(sentences)))
+            up.write('ЖЖ{0}ЖЖ {1}\n'.format(str(row.id), 'O'))
             for sent in sentences:
                 for c1 in sent:
                     up.write('{0} {1}\n'.format(c1, 'O'))
                 up.write('\n')
-    with open('./data/span.txt', 'w') as f:
-        f.write('\n'.join(span))
+    # with open('./data/span.txt', 'w') as f:
+    #     f.write('\n'.join(span))
 
 
-def filter_word(w):
+def filter_word(w, filter_known=False):
     w = w.replace('…', '')
     if len(w) == 1:
         return ''
-
     for bad_word in ['？', '《', '🔺', '️?', '!', '#', '%', '%', '，', 'Ⅲ', '》', '丨', '、', '）', '（', '​',
                      '👍', '。', '😎', '/', '】', '-', '⚠️', '：', '✅', '㊙️', '“', '”', ')', '(', '！', '🔥', ',']:
         if bad_word in w:
             return ''
+
+    if filter_known and w in dictionary:
+        print(w)
+        return ''
+
     return w
 
 
 def gen_csv():
     predict = codecs.open('./output/label_test.txt').read().split('\n\n')
-    spans = codecs.open('./data/span.txt').read().split('\n')
-    res = codecs.open('./output/res.csv', 'w')
+    res = codecs.open('./res_with_filter.csv', 'w')
     res.write('id,unknownEntities\n')
-
-    start = 0
-    for line in spans:
-        id, length = line.split()
-        length = int(length)
-        sample = predict[start:start + length]
-        unknown_entities = set()
-        for sent in sample:
-            sent = sent.split('\n')
-            entity = ''
-            for each in sent:
-                if each == '':
-                    continue
-                word, _, tag = each.split()
+    id = ''
+    unknown_entities = set()
+    for sent in predict:
+        sent = sent.split('\n')
+        entity = ''
+        for each in sent:
+            if each == '':
+                continue
+            tmp_id = re.findall('ЖЖ(.*?)ЖЖ', each)
+            if len(tmp_id) == 1:
+                if id != '':
+                    res.write('{0},{1}\n'.format(id, ';'.join(list(unknown_entities))))
+                id = tmp_id[0]
+                unknown_entities = set()
+                continue
+            word, _, tag = each.split()
+            if tag == 'B-ORG':
+                entity = word
+            elif tag == 'I-ORG':
+                entity += word
+            else:
+                entity = filter_word(entity, filter_known=True)
+                # entity = filter_word(entity, filter_known=False)
+                if entity != '':
+                    unknown_entities.add(entity)
                 if tag == 'B-ORG':
                     entity = word
-                elif tag == 'I-ORG':
-                    entity += word
                 else:
-                    entity = filter_word(entity)
-                    if entity != '':
-                        unknown_entities.add(entity)
-                    if tag == 'B-ORG':
-                        entity = word
-                    else:
-                        entity = ''
+                    entity = ''
 
-        start += length
-        res.write('{0},{1}\n'.format(id, ';'.join(list(unknown_entities))))
+    res.write('{0},{1}\n'.format(id, ';'.join(list(unknown_entities))))
     res.close()
 
 
@@ -220,6 +226,7 @@ def clean(line):
 
 
 if __name__ == "__main__":
+    dictionary = set(json.load(open('./data/dict.json'))['dict'])
     # process_train()
     # process_test()
     # gen_train()

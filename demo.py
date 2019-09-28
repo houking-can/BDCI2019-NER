@@ -1,13 +1,5 @@
-from   collections import Counter
+from collections import Counter
 
-a= open('./data/train.txt').read().split('\n\n')
-b=[]
-for each in a:
-    b.append(len(each.split('\n')))
-c= Counter(b)
-d = []
-for key,value in c.items():
-    print(key)
-    d.append((key,value))
-d.sort()
-a=1
+a = open('/home/yhj/competitions/BDCI/data/test.txt').read().split('\n\n')
+print(len(a))
+

@@ -74,7 +74,7 @@ if __name__ == "__main__":
                         pass
         row = [e for e in tmp if e not in dictionary]
         rows.append([example[0],';'.join(row)])
-    with open('res.csv','w',encoding='utf-8') as f:
+    with open('res_without_filter.csv','w',encoding='utf-8') as f:
         f_csv = csv.writer(f)
         f_csv.writerow(headers)
         f_csv.writerows(rows)
