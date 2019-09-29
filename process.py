@@ -3,16 +3,9 @@ import json
 import pandas as pd
 import codecs
 import re
+from collections import Counter
 
-
-def stop_words(x):
-    try:
-        x = x.strip()
-    except:
-        return ''
-    x = re.sub('\?\?+', '', x)
-    x = re.sub('\{IMG:.?.?.?\}', '', x)
-    return x
+dictionary = set(json.load(open('./data/dict.json'))['dict'])
 
 
 def read_test():
@@ -28,28 +21,33 @@ def read_train():
     return train_df
 
 
-def get_sentences(text):
+def get_sentences(text, max_length=300):
+    if len(text) < max_length - 2:
+        return [text]
+    tmp = re.split('。|！|？|；', text)
+    sent = ''
     sentences = []
-    tmp = re.split('。|！|\!|？|\?', text)
-    for sent in tmp:
-        if len(sent) > 62:
-            sentences.extend(re.split(',|，', sent))
-        else:
+    for each in tmp:
+        if len(sent + each) > max_length - 2:
             sentences.append(sent)
+            sent = ''
+        else:
+            sent += each
+    if sent != '':
+        sentences.append(sent)
+
     return sentences
 
 
 def gen_train():
     train_df = read_train()
     with codecs.open('./data/train.txt', 'w') as up:
-        for row in train_df.iloc[:-300].itertuples():
+        for row in train_df.iloc[:-200].itertuples():
             sentences = get_sentences(row.text)
             for sent in sentences:
-                if len(sent) < 2:
-                    continue
                 entities = str(row.unknownEntities).split(';')
-                # if '香港鑫泓' in entities:
-                #     a = 1
+                # 按长度进行排序
+                entities = sorted(entities, key=lambda i: len(i))
                 for entity in entities:
                     mark_sent = sent.replace(entity, 'Ё' + (len(entity) - 1) * 'Ж')
                 for c1, c2 in zip(sent, mark_sent):
@@ -63,11 +61,12 @@ def gen_train():
                 up.write('\n')
 
     with codecs.open('./data/dev.txt', 'w') as up:
-        for row in train_df.iloc[-300:].itertuples():
+        for row in train_df.iloc[-200:].itertuples():
             for sent in get_sentences(row.text):
                 if len(sent) < 2:
                     continue
                 entities = str(row.unknownEntities).split(';')
+                entities = sorted(entities, key=lambda i: len(i))
                 for entity in entities:
                     mark_sent = sent.replace(entity, 'Ё' + (len(entity) - 1) * 'Ж')
                 for c1, c2 in zip(sent, mark_sent):
@@ -82,18 +81,14 @@ def gen_train():
 
 def gen_test():
     test_df = read_test()
-    # span = []
     with codecs.open('./data/test.txt', 'w') as up:
         for row in test_df.iloc[:].itertuples():
             sentences = get_sentences(row.text)
-            # span.append(str(row.id) + ' ' + str(len(sentences)))
             up.write('ЖЖ{0}ЖЖ {1}\n'.format(str(row.id), 'O'))
             for sent in sentences:
                 for c1 in sent:
                     up.write('{0} {1}\n'.format(c1, 'O'))
                 up.write('\n')
-    # with open('./data/span.txt', 'w') as f:
-    #     f.write('\n'.join(span))
 
 
 def filter_word(w, filter_known=False):
@@ -177,7 +172,6 @@ def process_train(build_dict=True):
                     line[3] = ''
                     none.append(line)
 
-        print(len(none), len(data), len(lines) - 1)
         if build_dict:
             json.dump({"dict": list(dictionary)}, open('./data/dict.json', 'w', encoding='utf-8'), ensure_ascii=False,
                       indent=4)
@@ -221,14 +215,29 @@ def clean(line):
                     continue
             tmp += each
         line[i] = tmp
-
+    # remove title is the same as text
+    if len(line[1]) > 40 and line[2].startswith(line[1][:-9]):
+        line[1] = ''
     return line
 
 
 if __name__ == "__main__":
-    dictionary = set(json.load(open('./data/dict.json'))['dict'])
-    # process_train()
-    # process_test()
-    # gen_train()
-    # gen_test()
-    gen_csv()
+    process_train()
+    process_test()
+    gen_train()
+    gen_test()
+    # gen_csv()
+
+    # train = read_train()
+    # a = []
+    # for row in train.iloc[:].itertuples():
+    #     a.append(len(row.text))
+    # b = Counter(a)
+    # c = 0
+    # d = 0
+    # for key, value in b.items():
+    #     if key < 300:
+    #         c += value
+    #     else:
+    #         d += value
+    # print(c, d)
