@@ -12,6 +12,7 @@ import os
 
 __all__ = ['get_args_parser']
 
+
 def get_args_parser():
     from .bert_lstm_ner import __version__
     parser = argparse.ArgumentParser()
@@ -35,15 +36,15 @@ def get_args_parser():
                         help='')
 
     group2 = parser.add_argument_group('Model Config', 'config the model params')
-    group2.add_argument('-max_seq_length', type=int, default=80,
+    group2.add_argument('-max_seq_length', type=int, default=300,
                         help='The maximum total input sequence length after WordPiece tokenization.')
-    group2.add_argument('-do_train', action='store_false', default=False,
+    group2.add_argument('-do_train', action='store_true', default=False,
                         help='Whether to run training.')
-    group2.add_argument('-do_eval', action='store_false', default=False,
+    group2.add_argument('-do_eval', action='store_true', default=False,
                         help='Whether to run eval on the dev set.')
-    group2.add_argument('-do_predict', action='store_false', default=True,
+    group2.add_argument('-do_predict', action='store_true', default=False,
                         help='Whether to run the predict in inference mode on the test set.')
-    group2.add_argument('-batch_size', type=int, default=16,
+    group2.add_argument('-batch_size', type=int, default=4,
                         help='Total batch size for training, eval and predict.')
     group2.add_argument('-learning_rate', type=float, default=1e-5,
                         help='The initial learning rate for Adam.')
@@ -71,7 +72,7 @@ def get_args_parser():
     group2.add_argument('-do_lower_case', type=bool, default=False,
                         help='Whether to lower case the input text.')
     group2.add_argument('-clean', type=bool, default=True)
-    group2.add_argument('-device_map', type=str, default='2',
+    group2.add_argument('-device_map', type=str, default='1',
                         help='witch device using to train')
 
     # add labels

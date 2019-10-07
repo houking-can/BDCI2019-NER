@@ -1,5 +1,10 @@
-from collections import Counter
+import re
+def filter_word(w):
+    add_char = {']', '：', '~', '！', '%', '[', '《', '】', ';', '”', ':', '》', '？', '>', '/', '#', '。', '；', '&', '=', '，',
+                '“', '【'}
+    if len(w) == 1:
+        return ''
+    a="\\" + "|\\".join(add_char)
+    a=1
 
-a = open('/home/yhj/competitions/BDCI/data/test.txt').read().split('\n\n')
-print(len(a))
-
+print(filter_word('《第三方》'))
