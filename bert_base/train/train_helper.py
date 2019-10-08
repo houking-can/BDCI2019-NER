@@ -36,7 +36,7 @@ def get_args_parser():
                         help='')
 
     group2 = parser.add_argument_group('Model Config', 'config the model params')
-    group2.add_argument('-max_seq_length', type=int, default=300,
+    group2.add_argument('-max_seq_length', type=int, default=512,
                         help='The maximum total input sequence length after WordPiece tokenization.')
     group2.add_argument('-do_train', action='store_true', default=False,
                         help='Whether to run training.')
@@ -48,7 +48,7 @@ def get_args_parser():
                         help='Total batch size for training, eval and predict.')
     group2.add_argument('-learning_rate', type=float, default=1e-5,
                         help='The initial learning rate for Adam.')
-    group2.add_argument('-num_train_epochs', type=float, default=1,
+    group2.add_argument('-num_train_epochs', type=float, default=3,
                         help='Total number of training epochs to perform.')
     group2.add_argument('-dropout_rate', type=float, default=0.5,
                         help='Dropout rate')
@@ -72,7 +72,7 @@ def get_args_parser():
     group2.add_argument('-do_lower_case', type=bool, default=False,
                         help='Whether to lower case the input text.')
     group2.add_argument('-clean', type=bool, default=True)
-    group2.add_argument('-device_map', type=str, default='1',
+    group2.add_argument('-device_map', type=str, default='4',
                         help='witch device using to train')
 
     # add labels

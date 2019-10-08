@@ -28,14 +28,15 @@ from bert_base.bert import tokenization
 
 from bert_base.train.models import create_model, InputFeatures, InputExample
 from bert_base.server.helper import set_logger
+
 __version__ = '0.1.0'
 
 __all__ = ['__version__', 'DataProcessor', 'NerProcessor', 'write_tokens', 'convert_single_example',
            'filed_based_convert_examples_to_features', 'file_based_input_fn_builder',
            'model_fn_builder', 'train']
 
-
 logger = set_logger('NER Training')
+
 
 class DataProcessor(object):
     """Base class for data converters for sequence classification data sets."""
@@ -109,7 +110,7 @@ class NerProcessor(DataProcessor):
                 else:
                     # 否则通过传入的参数，按照逗号分割
                     self.labels = labels.split(',')
-                self.labels = set(self.labels) # to set
+                self.labels = set(self.labels)  # to set
             except Exception as e:
                 print(e)
         # 通过读取train文件获取标签的方法会出现一定的风险。
@@ -122,7 +123,8 @@ class NerProcessor(DataProcessor):
                 with codecs.open(os.path.join(self.output_dir, 'label_list.pkl'), 'wb') as rf:
                     pickle.dump(self.labels, rf)
             else:
-                self.labels = ["O", 'B-TIM', 'I-TIM', "B-PER", "I-PER", "B-ORG", "I-ORG", "B-LOC", "I-LOC", "X", "[CLS]", "[SEP]"]
+                self.labels = ["O", 'B-TIM', 'I-TIM', "B-PER", "I-PER", "B-ORG", "I-ORG", "B-LOC", "I-LOC", "X",
+                               "[CLS]", "[SEP]"]
         return self.labels
 
     def _create_example(self, lines, set_type):
@@ -206,18 +208,23 @@ def convert_single_example(ex_index, example, label_list, max_seq_length, tokeni
 
     textlist = example.text.split(' ')
     labellist = example.label.split(' ')
-    tokens = []
-    labels = []
-    for i, word in enumerate(textlist):
-        # 分词，如果是中文，就是分字,但是对于一些不在BERT的vocab.txt中得字符会被进行WordPice处理（例如中文的引号），可以将所有的分字操作替换为list(input)
-        token = tokenizer.tokenize(word)
-        tokens.extend(token)
-        label_1 = labellist[i]
-        for m in range(len(token)):
-            if m == 0:
-                labels.append(label_1)
-            else:  # 一般不会出现else
-                labels.append("X")
+    tokens = textlist
+    labels = labellist
+    assert len(tokens) == len(labels)
+    # tokens = []
+    # labels = []
+    # for i, word in enumerate(textlist):
+    #     # 分词，如果是中文，就是分字,但是对于一些不在BERT的vocab.txt中得字符会被进行WordPice处理（例如中文的引号），可以将所有的分字操作替换为list(input)
+    #     # token = tokenizer.tokenize(word)
+    #     token = word
+    #     tokens.extend(token)
+    #     label_1 = labellist[i]
+    #     for m in range(len(token)):
+    #         if m == 0:
+    #             labels.append(label_1)
+    #         else:  # 一般不会出现else
+    #             labels.append("X")
+
     # tokens = tokenizer.tokenize(example.text)
     # 序列截断
     if len(tokens) >= max_seq_length - 1:
@@ -389,8 +396,8 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
         # 加载BERT模型
         if init_checkpoint:
             (assignment_map, initialized_variable_names) = \
-                 modeling.get_assignment_map_from_checkpoint(tvars,
-                                                             init_checkpoint)
+                modeling.get_assignment_map_from_checkpoint(tvars,
+                                                            init_checkpoint)
             tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
 
         # 打印变量名
@@ -406,9 +413,9 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
 
         output_spec = None
         if mode == tf.estimator.ModeKeys.TRAIN:
-            #train_op = optimizer.optimizer(total_loss, learning_rate, num_train_steps)
+            # train_op = optimizer.optimizer(total_loss, learning_rate, num_train_steps)
             train_op = optimization.create_optimizer(
-                 total_loss, learning_rate, num_train_steps, num_warmup_steps, False)
+                total_loss, learning_rate, num_train_steps, num_warmup_steps, False)
             hook_dict = {}
             hook_dict['loss'] = total_loss
             hook_dict['global_steps'] = tf.train.get_or_create_global_step()
@@ -519,7 +526,7 @@ def train(args):
                 print('pleace remove the files of output dir and data.conf')
                 exit(-1)
 
-    #check output dir exists
+    # check output dir exists
     if not os.path.exists(args.output_dir):
         os.mkdir(args.output_dir)
 
@@ -550,7 +557,7 @@ def train(args):
         # 加载训练数据
         train_examples = processor.get_train_examples(args.data_dir)
         num_train_steps = int(
-            len(train_examples) *1.0 / args.batch_size * args.num_train_epochs)
+            len(train_examples) * 1.0 / args.batch_size * args.num_train_epochs)
         if num_train_steps < 1:
             raise AttributeError('training data is so small...')
         num_warmup_steps = int(num_train_steps * args.warmup_proportion)
@@ -700,4 +707,3 @@ def train(args):
     # filter model
     if args.filter_adam_var:
         adam_filter(args.output_dir)
-

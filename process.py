@@ -4,7 +4,8 @@ import re
 
 import pandas as pd
 
-dictionary = set(open('./data/dict.txt').read().split('\n'))
+dictionary = list(set(open('./data/dict.txt').read().split('\n')))
+dictionary = sorted(dictionary, key=lambda e: len(e), reverse=True)
 
 
 def read_csv():
@@ -17,18 +18,27 @@ def read_csv():
     return train_df, test_df
 
 
-def get_sentences(text, max_length=300):
+def get_sentences(text, max_length=512):
     if len(text) <= max_length - 2:
         return [text]
-    tmp = re.split('。|！|？|；', text)
+    tmp = re.split('(。|！|？|；)', text)
     sent = ''
     sentences = []
-    for each in tmp:
-        if len(sent + each) > max_length - 2:
+    if tmp[-1] != '':
+        tmp.append('。')
+    else:
+        tmp = tmp[:-1]
+
+    i = 0
+    while i < len(tmp) - 1:
+
+        if len(sent + tmp[i] + tmp[i + 1]) > max_length - 2:
             sentences.append(sent)
             sent = ''
-        else:
-            sent += each
+        if tmp[i] != '':
+            sent += (tmp[i] + tmp[i + 1])
+        i += 2
+
     if sent != '':
         sentences.append(sent)
 
@@ -55,49 +65,57 @@ def gen_bio():
     # gen train
     print("generate train...")
     with codecs.open('./data/train.txt', 'w') as up:
-        for row in train_df.iloc[:-300].itertuples():
+        for row in train_df.iloc[:-200].itertuples():
             sentences = get_sentences(row.text)
-            for sent in sentences:
-                entities = str(row.unknownEntities).split(';')
-                # 按长度进行排序
-                entities = sorted(entities, key=lambda i: len(i))
-                for entity in entities:
-                    mark_sent = sent.replace(entity, 'Ё' + (len(entity) - 1) * 'Ж')
-                for c1, c2 in zip(sent, mark_sent):
-                    if c2 == 'Ё':
-                        up.write('{0} {1}\n'.format(c1, 'B-ORG'))
-                    elif c2 == 'Ж':
-                        up.write('{0} {1}\n'.format(c1, 'I-ORG'))
+            up.write('Ж{0}Ж {1}\n'.format(str(row.id), 'O'))
+            for i, sent in enumerate(sentences):
+                # entities = str(row.unknownEntities).split(';')
+                # # 按长度进行排序
+                # entities = sorted(entities, key=lambda i: len(i))
+                # for entity in entities:
+
+                for entity in dictionary:
+                    sent = sent.replace(entity, 'Ё' + (len(entity) - 1) * 'Ж')
+                for c1, c2 in zip(sent, sentences[i]):
+                    if c1 == 'Ё':
+                        up.write('{0} {1}\n'.format(c2, 'B-ORG'))
+                    elif c1 == 'Ж':
+                        up.write('{0} {1}\n'.format(c2, 'I-ORG'))
                     else:
-                        up.write('{0} {1}\n'.format(c1, 'O'))
+                        up.write('{0} {1}\n'.format(c2, 'O'))
 
                 up.write('\n')
 
     # gen dev
     print("generate dev...")
     with codecs.open('./data/dev.txt', 'w') as up:
-        for row in train_df.iloc[-300:].itertuples():
-            for sent in get_sentences(row.text):
+        for row in train_df.iloc[-200:].itertuples():
+            sentences = get_sentences(row.text)
+            up.write('Ж{0}Ж {1}\n'.format(str(row.id), 'O'))
+            for i, sent in enumerate(sentences):
                 if len(sent) < 2:
                     continue
-                entities = str(row.unknownEntities).split(';')
-                entities = sorted(entities, key=lambda i: len(i))
-                for entity in entities:
-                    mark_sent = sent.replace(entity, 'Ё' + (len(entity) - 1) * 'Ж')
-                for c1, c2 in zip(sent, mark_sent):
-                    if c2 == 'Ё':
-                        up.write('{0} {1}\n'.format(c1, 'B-ORG'))
-                    elif c2 == 'Ж':
-                        up.write('{0} {1}\n'.format(c1, 'I-ORG'))
+                # entities = str(row.unknownEntities).split(';')
+                # # 按长度进行排序
+                # entities = sorted(entities, key=lambda i: len(i))
+                # for entity in entities:
+                for entity in dictionary:
+                    sent = sent.replace(entity, 'Ё' + (len(entity) - 1) * 'Ж')
+
+                for c1, c2 in zip(sent, sentences[i]):
+                    if c1 == 'Ё':
+                        up.write('{0} {1}\n'.format(c2, 'B-ORG'))
+                    elif c1 == 'Ж':
+                        up.write('{0} {1}\n'.format(c2, 'I-ORG'))
                     else:
-                        up.write('{0} {1}\n'.format(c1, 'O'))
+                        up.write('{0} {1}\n'.format(c2, 'O'))
                 up.write('\n')
     # gen test
     print("generate test...")
     with codecs.open('./data/test.txt', 'w') as up:
         for row in test_df.iloc[:].itertuples():
             sentences = get_sentences(row.text)
-            up.write('ЖЖ{0}ЖЖ {1}\n'.format(str(row.id), 'O'))
+            up.write('Ж{0}Ж {1}\n'.format(str(row.id), 'O'))
             for sent in sentences:
                 for c1 in sent:
                     up.write('{0} {1}\n'.format(c1, 'O'))
@@ -111,12 +129,14 @@ def filter_word(w):
         return ''
     if re.findall("\\" + "|\\".join(add_char), w):
         return ''
+    if w in dictionary:
+        return ''
     return w
 
 
 def gen_csv():
     predict = codecs.open('./output/label_test.txt').read().split('\n\n')
-    res = codecs.open('./res_with_filter.csv', 'w')
+    res = codecs.open('./res/300_new_process.csv', 'w')
     res.write('id,unknownEntities\n')
     id = ''
     unknown_entities = set()
@@ -126,9 +146,10 @@ def gen_csv():
         for each in sent:
             if each == '':
                 continue
-            tmp_id = re.findall('ЖЖ(.*?)ЖЖ', each)
+            tmp_id = re.findall('Ж(.*?)Ж', each)
             if len(tmp_id) == 1:
                 if id != '':
+                    # unknown_entities = select_candidates(unknown_entities)
                     res.write('{0},{1}\n'.format(id, ';'.join(list(unknown_entities))))
                 id = tmp_id[0]
                 unknown_entities = set()
@@ -146,9 +167,26 @@ def gen_csv():
                     entity = word
                 else:
                     entity = ''
-
+    # unknown_entities = select_candidates(unknown_entities)
     res.write('{0},{1}\n'.format(id, ';'.join(list(unknown_entities))))
     res.close()
+
+
+def select_candidates(unknown_entities):
+    unknown_entities = list(unknown_entities)
+    tmp = sorted(unknown_entities, key=lambda e: len(e))
+    if tmp != []:
+        unknown_entities = []
+        for i in range(len(tmp) - 1):
+            flag = True
+            for j in range(i + 1, len(tmp)):
+                if tmp[i] in tmp[j]:
+                    flag = False
+                    break
+            if flag:
+                unknown_entities.append(tmp[i])
+        unknown_entities.append(tmp[-1])
+    return unknown_entities
 
 
 def process_data():
