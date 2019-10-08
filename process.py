@@ -123,8 +123,12 @@ def gen_bio():
 
 
 def filter_word(w):
+
     add_char = {']', '：', '~', '！', '%', '[', '《', '】', ';', '”', ':', '》', '？', '>', '/', '#', '。', '；', '&', '=', '，',
                 '“', '【'}
+    w.strip('“')
+    w.strip('”')
+    w.rstrip('(')
     if len(w) == 1:
         return ''
     if re.findall("\\" + "|\\".join(add_char), w):
@@ -156,17 +160,21 @@ def gen_csv():
                 continue
             word, _, tag = each.split()
             if tag == 'B-ORG':
-                entity = word
+                if entity == '':
+                    entity = word
+                else:
+                    entity = filter_word(entity)
+                    if entity != '':
+                        unknown_entities.add(entity)
+                    entity = ''
             elif tag == 'I-ORG':
-                entity += word
+                if entity != '':
+                    entity += word
             else:
                 entity = filter_word(entity)
                 if entity != '':
                     unknown_entities.add(entity)
-                if tag == 'B-ORG':
-                    entity = word
-                else:
-                    entity = ''
+                entity = ''
     # unknown_entities = select_candidates(unknown_entities)
     res.write('{0},{1}\n'.format(id, ';'.join(list(unknown_entities))))
     res.close()
@@ -235,6 +243,6 @@ def clean(line):
 
 
 if __name__ == "__main__":
-    process_data()
-    gen_bio()
-    # gen_csv()
+    # process_data()
+    # gen_bio()
+    gen_csv()
