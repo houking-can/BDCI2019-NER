@@ -1,11 +1,13 @@
 import codecs
 import csv
 import re
-
+from tqdm import tqdm
 import pandas as pd
 
 dictionary = list(set(open('./data/dict.txt').read().split('\n')))
 dictionary = sorted(dictionary, key=lambda e: len(e), reverse=True)
+set_dictionary = set(dictionary)
+address = set(open('./data/dict/address.txt').read().split('\n'))
 
 
 def read_csv():
@@ -122,29 +124,97 @@ def gen_bio():
                 up.write('\n')
 
 
-def filter_word(w):
+def check_brackets(w):
+    w = w.rstrip('（')
+    w = w.rstrip('(')
+    w = w.lstrip(')')
+    w = w.lstrip('）')
+    cnt = 0
+    for c in w:
+        if c in ['(', '（']:
+            cnt += 1
+        elif c in [')', '）']:
+            cnt -= 1
+    if cnt != 0:
+        w = w[:-1]
+    return w
 
-    add_char = {']', '：', '~', '！', '%', '[', '《', '】', ';', '”', ':', '》', '？', '>', '/', '#', '。', '；', '&', '=', '，',
-                '“', '【'}
-    w.strip('“')
-    w.strip('”')
-    w.rstrip('(')
+
+def check_quotation(w):
+    w = w.lstrip('”')
+    w = w.lstrip('’')
+    w = w.rstrip('“')
+    w = w.rstrip('‘')
+
+    cnt_double = 0
+    cnt_single = 0
+    for c in w:
+        if c == '“':
+            cnt_double += 1
+        elif c == '”':
+            cnt_double -= 1
+    for c in w:
+        if c == '‘':
+            cnt_single += 1
+        elif c == '’':
+            cnt_single -= 1
+
+    if cnt_double == 0 and cnt_single == 0:
+        if w.startswith('“') and w.endswith('”'):
+            return w[1:-1]
+        if w.startswith('‘') and w.endswith('’'):
+            return w[1:-1]
+        return w
+
+    if cnt_double > 0:
+        if not w.startswith('“'):
+            return w + '”'
+        return w[1:]
+    if cnt_double < 0:
+        if not w.endswith('”'):
+            return '“' + w
+        return w[:-1]
+    if cnt_single > 0:
+        if not w.startswith('‘'):
+            return w + '’'
+        return w[1:]
+    if cnt_single < 0:
+        if not w.endswith('’'):
+            return '‘' + w
+        return w[:-1]
+
+
+def filter_word(w):
+    add_char = {']', '：', '~', '！', '%', '[', '《', '】', ';', ':', '》', '？', '>', '/', '#', '。', '；', '&', '=', '，',
+                '【'}
+    if w == '':
+        return ''
+
+    if w in address:
+        return ''
+
+    w = check_brackets(w)
+    w = check_quotation(w)
+    if w.isnumeric():
+        return ''
     if len(w) == 1:
         return ''
+
     if re.findall("\\" + "|\\".join(add_char), w):
         return ''
-    if w in dictionary:
+
+    if w in set_dictionary:
         return ''
     return w
 
 
-def gen_csv():
-    predict = codecs.open('./output/label_test.txt').read().split('\n\n')
-    res = codecs.open('./res/300_new_process.csv', 'w')
+def gen_csv(mode='test'):
+    predict = codecs.open('./output/label_%s.txt' % mode).read().split('\n\n')
+    res = codecs.open('./res/%s.csv' % mode, 'w')
     res.write('id,unknownEntities\n')
     id = ''
     unknown_entities = set()
-    for sent in predict:
+    for sent in tqdm(predict):
         sent = sent.split('\n')
         entity = ''
         for each in sent:
@@ -179,22 +249,21 @@ def gen_csv():
     res.write('{0},{1}\n'.format(id, ';'.join(list(unknown_entities))))
     res.close()
 
-
-def select_candidates(unknown_entities):
-    unknown_entities = list(unknown_entities)
-    tmp = sorted(unknown_entities, key=lambda e: len(e))
-    if tmp != []:
-        unknown_entities = []
-        for i in range(len(tmp) - 1):
-            flag = True
-            for j in range(i + 1, len(tmp)):
-                if tmp[i] in tmp[j]:
-                    flag = False
-                    break
-            if flag:
-                unknown_entities.append(tmp[i])
-        unknown_entities.append(tmp[-1])
-    return unknown_entities
+    def select_candidates(unknown_entities):
+        unknown_entities = list(unknown_entities)
+        tmp = sorted(unknown_entities, key=lambda e: len(e))
+        if tmp != []:
+            unknown_entities = []
+            for i in range(len(tmp) - 1):
+                flag = True
+                for j in range(i + 1, len(tmp)):
+                    if tmp[i] in tmp[j]:
+                        flag = False
+                        break
+                if flag:
+                    unknown_entities.append(tmp[i])
+            unknown_entities.append(tmp[-1])
+        return unknown_entities
 
 
 def process_data():
