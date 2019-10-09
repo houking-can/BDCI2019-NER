@@ -13,17 +13,6 @@ from __future__ import division
 from __future__ import print_function
 
 
-def start_server():
-    from bert_base.server import BertServer
-    from bert_base.server.helper import get_run_args
-
-    args = get_run_args()
-    print(args)
-    server = BertServer(args)
-    server.start()
-    server.join()
-
-
 def train_ner():
     import os
     from bert_base.train.train_helper import get_args_parser
@@ -44,4 +33,3 @@ if __name__ == '__main__':
     如果想训练，那么直接指定参数跑，如果想启动服务，那么注释掉train,打开server即可
     """
     train_ner()
-    #start_server()
