@@ -3,17 +3,20 @@ import csv
 import re
 from tqdm import tqdm
 import pandas as pd
+import random
 
-dictionary = list(set(open('./data/dict.txt').read().split('\n')))
-dictionary = sorted(dictionary, key=lambda e: len(e), reverse=True)
-set_dictionary = set(dictionary)
-address = set(open('./data/dict/address.txt').read().split('\n'))
+predict_dictionary = open('./data/dict/predict_dict.txt').read().split('\n')
+city = set(open('./data/dict/city.txt').read().split('\n'))
+train_dict = open('./data/dict/train_dict.txt').read().split('\n')
+
+bio_dictionary = predict_dictionary + train_dict
+bio_dictionary = sorted(bio_dictionary, key=lambda e: len(e), reverse=True)
+predict_dictionary = set(predict_dictionary)
 
 
 def read_csv():
     train_df = pd.read_csv('./data/Train_Data.csv')
     train_df['text'] = train_df['title'].fillna('') + '。' + train_df['text'].fillna('')
-    train_df = train_df[~train_df['unknownEntities'].isnull()]
 
     test_df = pd.read_csv('./data/Test_Data.csv')
     test_df['text'] = test_df['title'].fillna('') + '。' + test_df['text'].fillna('')
@@ -66,17 +69,13 @@ def gen_bio():
 
     # gen train
     print("generate train...")
+    rows = [each for each in train_df.iloc[:].itertuples()]
     with codecs.open('./data/train.txt', 'w') as up:
-        for row in train_df.iloc[:-200].itertuples():
+        for row in tqdm(rows):
             sentences = get_sentences(row.text)
             up.write('Ж{0}Ж {1}\n'.format(str(row.id), 'O'))
             for i, sent in enumerate(sentences):
-                # entities = str(row.unknownEntities).split(';')
-                # # 按长度进行排序
-                # entities = sorted(entities, key=lambda i: len(i))
-                # for entity in entities:
-
-                for entity in dictionary:
+                for entity in bio_dictionary:
                     sent = sent.replace(entity, 'Ё' + (len(entity) - 1) * 'Ж')
                 for c1, c2 in zip(sent, sentences[i]):
                     if c1 == 'Ё':
@@ -91,17 +90,14 @@ def gen_bio():
     # gen dev
     print("generate dev...")
     with codecs.open('./data/dev.txt', 'w') as up:
-        for row in train_df.iloc[-200:].itertuples():
+        rows = random.sample([each for each in train_df.iloc[:].itertuples()], 200)
+        for row in tqdm(rows):
             sentences = get_sentences(row.text)
             up.write('Ж{0}Ж {1}\n'.format(str(row.id), 'O'))
             for i, sent in enumerate(sentences):
                 if len(sent) < 2:
                     continue
-                # entities = str(row.unknownEntities).split(';')
-                # # 按长度进行排序
-                # entities = sorted(entities, key=lambda i: len(i))
-                # for entity in entities:
-                for entity in dictionary:
+                for entity in bio_dictionary:
                     sent = sent.replace(entity, 'Ё' + (len(entity) - 1) * 'Ж')
 
                 for c1, c2 in zip(sent, sentences[i]):
@@ -112,10 +108,12 @@ def gen_bio():
                     else:
                         up.write('{0} {1}\n'.format(c2, 'O'))
                 up.write('\n')
+
     # gen test
     print("generate test...")
     with codecs.open('./data/test.txt', 'w') as up:
-        for row in test_df.iloc[:].itertuples():
+        rows = [each for each in test_df.iloc[:].itertuples()]
+        for row in tqdm(rows):
             sentences = get_sentences(row.text)
             up.write('Ж{0}Ж {1}\n'.format(str(row.id), 'O'))
             for sent in sentences:
@@ -190,7 +188,7 @@ def filter_word(w):
     if w == '':
         return ''
 
-    if w in address:
+    if w in city:
         return ''
 
     w = check_brackets(w)
@@ -203,7 +201,7 @@ def filter_word(w):
     if re.findall("\\" + "|\\".join(add_char), w):
         return ''
 
-    if w in set_dictionary:
+    if w in predict_dictionary:
         return ''
     return w
 
@@ -224,7 +222,7 @@ def gen_csv(mode='test'):
             if len(tmp_id) == 1:
                 if id != '':
                     # unknown_entities = select_candidates(unknown_entities)
-                    res.write('{0},{1}\n'.format(id, ';'.join(list(unknown_entities))))
+                    res.write('{0},{1}\n'.format(id, ';'.join(sorted(list(unknown_entities)))))
                 id = tmp_id[0]
                 unknown_entities = set()
                 continue
@@ -246,27 +244,29 @@ def gen_csv(mode='test'):
                     unknown_entities.add(entity)
                 entity = ''
     # unknown_entities = select_candidates(unknown_entities)
-    res.write('{0},{1}\n'.format(id, ';'.join(list(unknown_entities))))
+    res.write('{0},{1}\n'.format(id, ';'.join(sorted(list(unknown_entities)))))
     res.close()
 
-    def select_candidates(unknown_entities):
-        unknown_entities = list(unknown_entities)
-        tmp = sorted(unknown_entities, key=lambda e: len(e))
-        if tmp != []:
-            unknown_entities = []
-            for i in range(len(tmp) - 1):
-                flag = True
-                for j in range(i + 1, len(tmp)):
-                    if tmp[i] in tmp[j]:
-                        flag = False
-                        break
-                if flag:
-                    unknown_entities.append(tmp[i])
-            unknown_entities.append(tmp[-1])
-        return unknown_entities
+
+def select_candidates(unknown_entities):
+    unknown_entities = list(unknown_entities)
+    tmp = sorted(unknown_entities, key=lambda e: len(e))
+    if tmp != []:
+        unknown_entities = []
+        for i in range(len(tmp) - 1):
+            flag = True
+            for j in range(i + 1, len(tmp)):
+                if tmp[i] in tmp[j]:
+                    flag = False
+                    break
+            if flag:
+                unknown_entities.append(tmp[i])
+        unknown_entities.append(tmp[-1])
+    return unknown_entities
 
 
 def process_data():
+    print('process train.csv...')
     with open('./data/old/Train_Data.csv', 'r', encoding='utf-8') as myFile:
         lines = list(csv.reader(myFile))
         data = []
@@ -280,17 +280,18 @@ def process_data():
             f_csv.writerow(headers)
             f_csv.writerows(data)
 
+    print('process test.csv...')
     with open('./data/old/Test_Data.csv', 'r', encoding='utf-8') as myFile:
         lines = list(csv.reader(myFile))
-    data = []
-    for line in lines[1:]:
-        line = clean(line)
-        data.append(line)
-    headers = ['id', 'title', 'text']
-    with open('./data/Test_Data.csv', 'w', encoding='utf-8') as f:
-        f_csv = csv.writer(f)
-        f_csv.writerow(headers)
-        f_csv.writerows(data)
+        data = []
+        for line in lines[1:]:
+            line = clean(line)
+            data.append(line)
+        headers = ['id', 'title', 'text']
+        with open('./data/Test_Data.csv', 'w', encoding='utf-8') as f:
+            f_csv = csv.writer(f)
+            f_csv.writerow(headers)
+            f_csv.writerows(data)
 
 
 def clean(line):
@@ -312,6 +313,6 @@ def clean(line):
 
 
 if __name__ == "__main__":
-    # process_data()
-    # gen_bio()
-    gen_csv()
+    process_data()
+    gen_bio()
+    # gen_csv()

@@ -543,8 +543,8 @@ def train(args):
 
     run_config = tf.estimator.RunConfig(
         model_dir=args.output_dir,
-        save_summary_steps=500,
-        save_checkpoints_steps=500,
+        save_summary_steps=args.save_summary_steps,
+        save_checkpoints_steps=args.save_checkpoints_steps,
         session_config=session_config
     )
 
@@ -598,7 +598,7 @@ def train(args):
     if args.do_train and args.do_eval:
         # 1. 将数据转化为tf_record 数据
         train_file = os.path.join(args.output_dir, "train.tf_record")
-        if not os.path.exists(train_file):
+        if not os.path.exists(train_file) or args.clean_record:
             filed_based_convert_examples_to_features(
                 train_examples, label_list, args.max_seq_length, tokenizer, train_file, args.output_dir)
 
@@ -611,7 +611,7 @@ def train(args):
         # estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
 
         eval_file = os.path.join(args.output_dir, "eval.tf_record")
-        if not os.path.exists(eval_file):
+        if not os.path.exists(eval_file) or args.clean_record:
             filed_based_convert_examples_to_features(
                 eval_examples, label_list, args.max_seq_length, tokenizer, eval_file, args.output_dir)
 
@@ -637,6 +637,8 @@ def train(args):
         eval_spec = tf.estimator.EvalSpec(input_fn=eval_input_fn)
         tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
 
+
+
     if args.do_predict:
         token_path = os.path.join(args.output_dir, "token_test.txt")
         if os.path.exists(token_path):
@@ -648,9 +650,10 @@ def train(args):
 
         predict_examples = processor.get_test_examples(args.data_dir)
         predict_file = os.path.join(args.output_dir, "predict.tf_record")
-        filed_based_convert_examples_to_features(predict_examples, label_list,
-                                                 args.max_seq_length, tokenizer,
-                                                 predict_file, args.output_dir, mode="test")
+        if not os.path.exists(predict_file) or args.clean_record:
+            filed_based_convert_examples_to_features(predict_examples, label_list,
+                                                     args.max_seq_length, tokenizer,
+                                                     predict_file, args.output_dir, mode="test")
 
         logger.info("***** Running prediction*****")
         logger.info("  Num examples = %d", len(predict_examples))
