@@ -4,12 +4,14 @@ import re
 from tqdm import tqdm
 import pandas as pd
 import random
+import os
 
-predict_dictionary = open('./data/dict/predict_dict.txt').read().split('\n')
+predict_dictionary = open('./data/dict/dict_oracle.txt').read().split('\n')
 city = set(open('./data/dict/city.txt').read().split('\n'))
 train_dict = open('./data/dict/train_dict.txt').read().split('\n')
 
-bio_dictionary = predict_dictionary + train_dict
+# bio_dictionary = list(set(predict_dictionary + train_dict))
+bio_dictionary = list(set(predict_dictionary))
 bio_dictionary = sorted(bio_dictionary, key=lambda e: len(e), reverse=True)
 predict_dictionary = set(predict_dictionary)
 
@@ -23,10 +25,10 @@ def read_csv():
     return train_df, test_df
 
 
-def get_sentences(text, max_length=512):
+def get_sentences(text, max_length=128):
     if len(text) <= max_length - 2:
         return [text]
-    tmp = re.split('(。|！|？|；)', text)
+    tmp = re.split('(。|！|？|；|，|,)', text)
     sent = ''
     sentences = []
     if tmp[-1] != '':
@@ -127,15 +129,42 @@ def check_brackets(w):
     w = w.rstrip('(')
     w = w.lstrip(')')
     w = w.lstrip('）')
-    cnt = 0
+    cnt_chinese = 0
+    cnt_english = 0
     for c in w:
-        if c in ['(', '（']:
-            cnt += 1
-        elif c in [')', '）']:
-            cnt -= 1
-    if cnt != 0:
-        w = w[:-1]
-    return w
+        if c == '（':
+            cnt_chinese += 1
+        elif c == '）':
+            cnt_chinese -= 1
+    for c in w:
+        if c == '(':
+            cnt_english += 1
+        elif c == ')':
+            cnt_english -= 1
+
+    if cnt_chinese == 0 and cnt_english == 0:
+        if w.startswith('（') and w.endswith('）'):
+            return w[1:-1]
+        if w.startswith('(') and w.endswith(')'):
+            return w[1:-1]
+        return w
+
+    if cnt_chinese > 0:
+        if not w.startswith('（'):
+            return w + '）'
+        return w[1:]
+    if cnt_chinese < 0:
+        if not w.endswith('）'):
+            return '（' + w
+        return w[:-1]
+    if cnt_english > 0:
+        if not w.startswith('('):
+            return w + ')'
+        return w[1:]
+    if cnt_english < 0:
+        if not w.endswith(')'):
+            return '(' + w
+        return w[:-1]
 
 
 def check_quotation(w):
@@ -184,11 +213,14 @@ def check_quotation(w):
 
 def filter_word(w):
     add_char = {']', '：', '~', '！', '%', '[', '《', '】', ';', ':', '》', '？', '>', '/', '#', '。', '；', '&', '=', '，',
-                '【'}
+                '【', '@'}
     if w == '':
         return ''
 
-    if w in city:
+    if re.findall("\\" + "|\\".join(add_char), w):
+        return ''
+
+    if judge_pure_english(w):
         return ''
 
     w = check_brackets(w)
@@ -198,7 +230,7 @@ def filter_word(w):
     if len(w) == 1:
         return ''
 
-    if re.findall("\\" + "|\\".join(add_char), w):
+    if w in city:
         return ''
 
     if w in predict_dictionary:
@@ -206,9 +238,16 @@ def filter_word(w):
     return w
 
 
+def judge_pure_english(keyword):
+    return all(ord(c) < 128 for c in keyword)
+
+
 def gen_csv(mode='test'):
     predict = codecs.open('./output/label_%s.txt' % mode).read().split('\n\n')
-    res = codecs.open('./res/%s.csv' % mode, 'w')
+    save_name = './res/%s.csv' % mode
+    if os.path.exists(save_name):
+        os.remove(save_name)
+    res = codecs.open(save_name, 'w')
     res.write('id,unknownEntities\n')
     id = ''
     unknown_entities = set()
