@@ -7,13 +7,26 @@ import random
 import os
 
 predict_dictionary = open('./data/dict/dict_oracle.txt').read().split('\n')
-city = set(open('./data/dict/city.txt').read().split('\n'))
-train_dict = open('./data/dict/train_dict.txt').read().split('\n')
+predict_dictionary = [each.strip() for each in predict_dictionary]
+predict_dictionary = set([each for each in predict_dictionary if each != ''])
 
-# bio_dictionary = list(set(predict_dictionary + train_dict))
-bio_dictionary = list(set(predict_dictionary))
+city = set(open('./data/dict/city.txt').read().split('\n'))
+
+none = set(open('./data/dict/dict_label_none.txt').read().split('\n'))
+none = [each.strip() for each in none]
+none = set([each for each in none if each != ''])
+none = none - predict_dictionary
+
+train_dict = open('./data/dict/train_dict.txt').read().split('\n')
+train_dict = [each.strip() for each in train_dict]
+train_dict = set([each for each in train_dict if each != ''])
+train_dict = train_dict - none - predict_dictionary
+
+bio_dictionary = list(predict_dictionary | train_dict | none)
+# bio_dictionary = list(set(predict_dictionary))
 bio_dictionary = sorted(bio_dictionary, key=lambda e: len(e), reverse=True)
-predict_dictionary = set(predict_dictionary)
+
+assert ('' not in bio_dictionary)
 
 
 def read_csv():
@@ -26,9 +39,9 @@ def read_csv():
 
 
 def get_sentences(text, max_length=128):
-    if len(text) <= max_length - 2:
-        return [text]
-    tmp = re.split('(。|！|？|；|，|,)', text)
+    # if len(text) <= max_length - 2:
+    #     return [text]
+    tmp = re.split('(。|！|？|；|，|\?|\!)', text)
     sent = ''
     sentences = []
     if tmp[-1] != '':
@@ -39,13 +52,12 @@ def get_sentences(text, max_length=128):
     i = 0
     while i < len(tmp) - 1:
 
-        if len(sent + tmp[i] + tmp[i + 1]) > max_length - 2:
+        if len(sent + tmp[i] + tmp[i + 1]) > max_length - 2 and len(tmp[i]) <= 150:
             sentences.append(sent)
             sent = ''
-        if tmp[i] != '':
+        if tmp[i] != '' and len(tmp[i]) <= 150:
             sent += (tmp[i] + tmp[i + 1])
         i += 2
-
     if sent != '':
         sentences.append(sent)
 
@@ -92,7 +104,7 @@ def gen_bio():
     # gen dev
     print("generate dev...")
     with codecs.open('./data/dev.txt', 'w') as up:
-        rows = random.sample([each for each in train_df.iloc[:].itertuples()], 200)
+        rows = random.sample([each for each in train_df.iloc[:].itertuples()], 100)
         for row in tqdm(rows):
             sentences = get_sentences(row.text)
             up.write('Ж{0}Ж {1}\n'.format(str(row.id), 'O'))
@@ -211,17 +223,29 @@ def check_quotation(w):
         return w[:-1]
 
 
+def completion(w):
+    if w.endswith('有限'):
+        return w + '公司'
+    elif w.endswith('有限公'):
+        return w + '司'
+    elif w.endswith('大学'):
+        return ''
+    elif w.endswith('中学'):
+        return ''
+    return w
+
+
 def filter_word(w):
     add_char = {']', '：', '~', '！', '%', '[', '《', '】', ';', ':', '》', '？', '>', '/', '#', '。', '；', '&', '=', '，',
-                '【', '@'}
+                '【', '@', '、', '|'}
     if w == '':
         return ''
 
     if re.findall("\\" + "|\\".join(add_char), w):
         return ''
 
-    if judge_pure_english(w):
-        return ''
+    # if judge_pure_english(w):
+    #     return ''
 
     w = check_brackets(w)
     w = check_quotation(w)
@@ -229,6 +253,8 @@ def filter_word(w):
         return ''
     if len(w) == 1:
         return ''
+
+    w = completion(w)
 
     if w in city:
         return ''
@@ -242,7 +268,7 @@ def judge_pure_english(keyword):
     return all(ord(c) < 128 for c in keyword)
 
 
-def gen_csv(mode='test'):
+def gen_csv(mode='train'):
     predict = codecs.open('./output/label_%s.txt' % mode).read().split('\n\n')
     save_name = './res/%s.csv' % mode
     if os.path.exists(save_name):
@@ -306,7 +332,7 @@ def select_candidates(unknown_entities):
 
 def process_data():
     print('process train.csv...')
-    with open('./data/old/Train_Data.csv', 'r', encoding='utf-8') as myFile:
+    with open('./data/old/Train_Data_Hand.csv', 'r', encoding='utf-8') as myFile:
         lines = list(csv.reader(myFile))
         data = []
         for line in lines[1:]:
@@ -354,4 +380,13 @@ def clean(line):
 if __name__ == "__main__":
     process_data()
     gen_bio()
-    # gen_csv()
+    gen_csv()
+
+    # tmp = []
+    # for k, v in Counter(cnt).items():
+    #     tmp.append((k, v))
+    # tmp.sort()
+    # for each in tmp:
+    #     print(each[0], each[1])
+    # with open('see.txt', 'w', encoding='utf-8') as f:
+    #     f.write('\n\n'.join(cnt))
