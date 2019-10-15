@@ -1,7 +1,7 @@
 import re
 from collections import Counter
 
-a = open('./test.csv', encoding='utf-8').read().split('\n')
+a = open('./res/test_completion.csv', encoding='utf-8').read().split('\n')
 tmp = []
 for i in range(1, len(a)):
     entities = ''
@@ -16,14 +16,16 @@ C = list(Counter(tmp).items())
 C.sort(key=lambda k: k[1], reverse=True)
 cnt = 0
 for each in C:
-    print(each[0], each[1])
-    # try:
-    #     if each[0][-1].isdigit():
-    #         print(each[0], each[1])
-    #         cnt += each[1]
-    # except:
-    #     pass
-
+    if each[0] != '':
+        xx.append(each[0] + ' ' + str(each[1]))
+with open('./res/order.txt', 'w', encoding='utf-8') as f:
+    f.write('\n'.join(xx))
+# try:
+#     if each[0][-1].isdigit():
+#         print(each[0], each[1])
+#         cnt += each[1]
+# except:
+#     pass
 
 # a = open('./res/test.csv', encoding='utf-8').read().split('\n')
 # b = open('./res/best.csv', encoding='utf-8').read().split('\n')

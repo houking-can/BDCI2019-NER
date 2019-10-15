@@ -233,6 +233,8 @@ def filter_word(w):
     if re.findall("\\" + "|\\".join(add_char), w):
         return ''
 
+    if 'CEO' in w:
+        w = w.replace('CEO', '')
     # if judge_pure_english(w):
     #     return ''
 
@@ -243,11 +245,6 @@ def filter_word(w):
     if len(w) == 1:
         return ''
 
-    if w in remove:
-        return ''
-
-    if w in predict_dictionary:
-        return ''
     return w
 
 
@@ -346,6 +343,9 @@ def completion(candidates, context):
                         else:
                             tmp.append(each)
                             tmp.append(new)
+                    else:
+                        if ex > 1:
+                            print(each, new)
                 except:
                     pass
 
@@ -361,16 +361,22 @@ def completion(candidates, context):
             tmp.append(each)
 
     tmp = list(set(tmp))
-    tmp = [(context.count(each), each) for each in tmp]
-    tmp.sort(key=lambda k: (k[0], len(k[1])), reverse=True)
+
+    xx = []
+    for w in tmp:
+        if w in remove or w in predict_dictionary:
+            continue
+        xx.append((context.count(w), w))
+    xx.sort(key=lambda k: (k[0], len(k[1])), reverse=True)
 
     res = []
-    for i in range(len(tmp) - 1):
-        if tmp[i + 1][0] == tmp[i][0] and tmp[i + 1][1].startswith(tmp[i][1]):
+    for i in range(len(xx) - 1):
+        if xx[i + 1][0] == xx[i][0] and xx[i + 1][1].startswith(xx[i][1]):
             continue
-        res.append(tmp[i][1])
-    if len(tmp) > 0:
-        res.append(tmp[-1][1])
+        res.append(xx[i][1])
+    if len(xx) > 0:
+        res.append(xx[-1][1])
+
     return res
 
 
@@ -457,9 +463,10 @@ def remove_entity(mode='test'):
         else:
             res.write('%s\n' % line)
 
+
 if __name__ == "__main__":
     # process_data()
     # gen_bio()
     # gen_csv()
-    # back_process()
-    remove_entity()
+    back_process()
+    # remove_entity()
