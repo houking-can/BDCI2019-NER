@@ -10,7 +10,8 @@ predict_dictionary = open('./data/dict/dict_oracle.txt').read().split('\n')
 predict_dictionary = [each.strip() for each in predict_dictionary]
 predict_dictionary = set([each for each in predict_dictionary if each != ''])
 
-city = set(open('./data/dict/city.txt').read().split('\n'))
+remove = set(open('./data/dict/remove.txt').read().split('\n'))
+if '' in remove: remove.remove('')
 
 none = set(open('./data/dict/dict_label_none.txt').read().split('\n'))
 none = [each.strip() for each in none]
@@ -223,21 +224,9 @@ def check_quotation(w):
         return w[:-1]
 
 
-def completion(w):
-    if w.endswith('有限'):
-        return w + '公司'
-    elif w.endswith('有限公'):
-        return w + '司'
-    elif w.endswith('大学'):
-        return ''
-    elif w.endswith('中学'):
-        return ''
-    return w
-
-
 def filter_word(w):
     add_char = {']', '：', '~', '！', '%', '[', '《', '】', ';', ':', '》', '？', '>', '/', '#', '。', '；', '&', '=', '，',
-                '【', '@', '、', '|'}
+                '【', '@', '、', '|', '大学', '中学', '小学'}
     if w == '':
         return ''
 
@@ -254,9 +243,7 @@ def filter_word(w):
     if len(w) == 1:
         return ''
 
-    w = completion(w)
-
-    if w in city:
+    if w in remove:
         return ''
 
     if w in predict_dictionary:
@@ -268,7 +255,7 @@ def judge_pure_english(keyword):
     return all(ord(c) < 128 for c in keyword)
 
 
-def gen_csv(mode='train'):
+def gen_csv(mode='test'):
     predict = codecs.open('./output/label_%s.txt' % mode).read().split('\n\n')
     save_name = './res/%s.csv' % mode
     if os.path.exists(save_name):
@@ -287,7 +274,7 @@ def gen_csv(mode='train'):
             if len(tmp_id) == 1:
                 if id != '':
                     # unknown_entities = select_candidates(unknown_entities)
-                    res.write('{0},{1}\n'.format(id, ';'.join(sorted(list(unknown_entities)))))
+                    res.write('{0},{1}\n'.format(id, ';'.join(list(unknown_entities))))
                 id = tmp_id[0]
                 unknown_entities = set()
                 continue
@@ -309,25 +296,82 @@ def gen_csv(mode='train'):
                     unknown_entities.add(entity)
                 entity = ''
     # unknown_entities = select_candidates(unknown_entities)
-    res.write('{0},{1}\n'.format(id, ';'.join(sorted(list(unknown_entities)))))
+    res.write('{0},{1}\n'.format(id, ';'.join(list(unknown_entities))))
     res.close()
 
 
-def select_candidates(unknown_entities):
-    unknown_entities = list(unknown_entities)
-    tmp = sorted(unknown_entities, key=lambda e: len(e))
-    if tmp != []:
-        unknown_entities = []
-        for i in range(len(tmp) - 1):
-            flag = True
-            for j in range(i + 1, len(tmp)):
-                if tmp[i] in tmp[j]:
-                    flag = False
+# def select_candidates(unknown_entities):
+#     unknown_entities = list(unknown_entities)
+#     tmp = sorted(unknown_entities, key=lambda e: len(e))
+#     if tmp != []:
+#         unknown_entities = []
+#         for i in range(len(tmp) - 1):
+#             flag = True
+#             for j in range(i + 1, len(tmp)):
+#                 if tmp[i] in tmp[j]:
+#                     flag = False
+#                     break
+#             if flag:
+#                 unknown_entities.append(tmp[i])
+#         unknown_entities.append(tmp[-1])
+#     return unknown_entities
+
+
+def completion(candidates, context):
+    remove_char = {']', '：', '~', '！', '%', '[', '《', '】', ';', ':', '》', '？', '>', '/', '#', '。', '；', '&', '=',
+                   '，',
+                   '【', '@', '、', '|', ',', '”', '?'}
+
+    context = context[1] + '。' + context[2]
+    tmp = []
+    for each in candidates:
+        index = context.find(each)
+        ex = 1
+        if context.count(each) > 1:
+            for i in range(1, len(context) - index - len(each)):
+                if context.count(each) != context.count(context[index:index + i + len(each)]):
+                    ex = i
                     break
+
+            new = context[index:index + ex - 1 + len(each)]
+            flag = True
+            if len(new) < 22 and len(re.findall("\\" + "|\\".join(remove_char), new)) == 0:
+                try:
+                    xx = re.findall('(%s.*?)(理财|集团|控股|平台|银行|公司|资本|投资|生态|策略|控股集团)' % each, new)
+                    if xx:
+                        flag = False
+                        new = xx[0][0] + xx[0][1]
+                        if context.count(each) == context.count(new):
+                            tmp.append(new)
+                        else:
+                            tmp.append(each)
+                            tmp.append(new)
+                except:
+                    pass
+
             if flag:
-                unknown_entities.append(tmp[i])
-        unknown_entities.append(tmp[-1])
-    return unknown_entities
+                tmp.append(each)
+        else:
+            # xx = re.findall('(%s.*?)(理财|集团|控股|平台|银行|公司|资本|投资|生态|策略|控股集团)' % each, context)
+            # if xx:
+            #     new = xx[0][0] + xx[0][1]
+            #     if len(new) < 22 and len(re.findall("\\" + "|\\".join(add_char), new)) == 0:
+            #         print(each, new)
+            #     each = new
+            tmp.append(each)
+
+    tmp = list(set(tmp))
+    tmp = [(context.count(each), each) for each in tmp]
+    tmp.sort(key=lambda k: (k[0], len(k[1])), reverse=True)
+
+    res = []
+    for i in range(len(tmp) - 1):
+        if tmp[i + 1][0] == tmp[i][0] and tmp[i + 1][1].startswith(tmp[i][1]):
+            continue
+        res.append(tmp[i][1])
+    if len(tmp) > 0:
+        res.append(tmp[-1][1])
+    return res
 
 
 def process_data():
@@ -377,16 +421,45 @@ def clean(line):
     return line
 
 
-if __name__ == "__main__":
-    process_data()
-    gen_bio()
-    gen_csv()
+def back_process(mode='test'):
+    print('after treatment...')
+    results = open('./res/%s.csv' % mode).read().split('\n')
+    if results[-1] == '':
+        results = results[:-1]
+    res = codecs.open('./res/%s_completion.csv' % mode, 'w')
+    res.write('id,unknownEntities\n')
 
-    # tmp = []
-    # for k, v in Counter(cnt).items():
-    #     tmp.append((k, v))
-    # tmp.sort()
-    # for each in tmp:
-    #     print(each[0], each[1])
-    # with open('see.txt', 'w', encoding='utf-8') as f:
-    #     f.write('\n\n'.join(cnt))
+    with open('./data/old/Test_Data.csv', 'r', encoding='utf-8') as myFile:
+        lines = list(csv.reader(myFile))
+        if lines[-1] == '':
+            lines = lines[:-1]
+        for i in range(1, len(lines)):
+            id, candidates = results[i].split(',')
+            candidates = candidates.split(';')
+            entity = completion(candidates, lines[i])
+            res.write('{0},{1}\n'.format(id, ';'.join(entity)))
+    res.close()
+
+
+def remove_entity(mode='test'):
+    print('Removing entities...')
+    results = open('./res/%s_completion.csv' % mode).read().split('\n')
+    if results[-1] == '':
+        results = results[:-1]
+    res = codecs.open('./res/%s_completion.csv' % mode, 'w')
+    res.write('id,unknownEntities\n')
+    for line in results[1:]:
+        if ',' in line:
+            id, entities = line.split(',')
+            entities = entities.split(';')
+            tmp = [each for each in entities if each not in remove]
+            res.write('%s,%s\n' % (id, ';'.join(tmp)))
+        else:
+            res.write('%s\n' % line)
+
+if __name__ == "__main__":
+    # process_data()
+    # gen_bio()
+    # gen_csv()
+    # back_process()
+    remove_entity()

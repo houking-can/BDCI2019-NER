@@ -2,7 +2,8 @@ import csv
 import codecs
 import re
 
-city = set(open('./data/dict/city.txt').read().split('\n'))
+city = set(open('./data/dict/remove.txt').read().split('\n'))
+
 
 add_char = {']', '：', '~', '！', '%', '[', '《', '】', ';', ':', '》', '？', '>', '/', '#', '。', '；', '&', '=',
             '，',
