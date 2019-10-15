@@ -18,7 +18,7 @@ none = [each.strip() for each in none]
 none = set([each for each in none if each != ''])
 none = none - predict_dictionary
 
-train_dict = open('./data/dict/train_dict.txt').read().split('\n')
+train_dict = open('./data/dict/train_dict_2.txt').read().split('\n')
 train_dict = [each.strip() for each in train_dict]
 train_dict = set([each for each in train_dict if each != ''])
 train_dict = train_dict - none - predict_dictionary
@@ -235,8 +235,8 @@ def filter_word(w):
 
     if 'CEO' in w:
         w = w.replace('CEO', '')
-    # if judge_pure_english(w):
-    #     return ''
+    if judge_pure_english(w) and len(w) == 2:
+        return ''
 
     w = check_brackets(w)
     w = check_quotation(w)
@@ -345,7 +345,11 @@ def completion(candidates, context):
                             tmp.append(new)
                     else:
                         if ex > 1:
-                            print(each, new)
+                            if len(each) <= 3 and len(new) == 4:
+                                tmp.append(new)
+                                # print(each, new)
+
+                            flag = False
                 except:
                     pass
 
@@ -430,12 +434,15 @@ def clean(line):
 def back_process(mode='test'):
     print('after treatment...')
     results = open('./res/%s.csv' % mode).read().split('\n')
+    # results = open('./res/best.csv').read().split('\n')
     if results[-1] == '':
         results = results[:-1]
     res = codecs.open('./res/%s_completion.csv' % mode, 'w')
+    # res = codecs.open('./res/best.csv', 'w')
+
     res.write('id,unknownEntities\n')
 
-    with open('./data/old/Test_Data.csv', 'r', encoding='utf-8') as myFile:
+    with open('./data/old/T%s_Data.csv' % mode[1:], 'r', encoding='utf-8') as myFile:
         lines = list(csv.reader(myFile))
         if lines[-1] == '':
             lines = lines[:-1]
@@ -467,6 +474,6 @@ def remove_entity(mode='test'):
 if __name__ == "__main__":
     # process_data()
     # gen_bio()
-    # gen_csv()
-    back_process()
+    # gen_csv(mode='test')
+    back_process(mode='test')
     # remove_entity()

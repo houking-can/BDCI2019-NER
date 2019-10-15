@@ -1,25 +1,45 @@
 import re
 from collections import Counter
 
-a = open('./res/test_completion.csv', encoding='utf-8').read().split('\n')
-tmp = []
-for i in range(1, len(a)):
-    entities = ''
-    if ',' in a[i]:
-        id, entities = a[i].split(',')
+import codecs
+remove = set(open('./data/dict/remove.txt').read().split('\n'))
+if '' in remove: remove.remove('')
+
+results = open('./res/best.csv').read().split('\n')
+if results[-1] == '':
+    results = results[:-1]
+res = codecs.open('./res/best.csv', 'w')
+res.write('id,unknownEntities\n')
+for line in results[1:]:
+    if ',' in line:
+        id, entities = line.split(',')
+        entities = entities.split(';')
+        tmp = [each for each in entities if each not in remove]
+        res.write('%s,%s\n' % (id, ';'.join(tmp)))
     else:
-        id = a[i]
-    entities = entities.split(';')
-    tmp.extend(entities)
-xx = []
-C = list(Counter(tmp).items())
-C.sort(key=lambda k: k[1], reverse=True)
-cnt = 0
-for each in C:
-    if each[0] != '':
-        xx.append(each[0] + ' ' + str(each[1]))
-with open('./res/order.txt', 'w', encoding='utf-8') as f:
-    f.write('\n'.join(xx))
+        res.write('%s\n' % line)
+
+#
+# a = open('./res/test_completion.csv', encoding='utf-8').read().split('\n')
+# tmp = []
+# for i in range(1, len(a)):
+#     entities = ''
+#     if ',' in a[i]:
+#         id, entities = a[i].split(',')
+#     else:
+#         id = a[i]
+#     entities = entities.split(';')
+#     tmp.extend(entities)
+# xx = []
+# C = list(Counter(tmp).items())
+# C.sort(key=lambda k: k[1], reverse=True)
+# cnt = 0
+# for each in C:
+#     if each[0] != '':
+#         xx.append(each[0] + ' ' + str(each[1]))
+# with open('./res/order.txt', 'w', encoding='utf-8') as f:
+#     f.write('\n'.join(xx))
+
 # try:
 #     if each[0][-1].isdigit():
 #         print(each[0], each[1])
@@ -105,10 +125,12 @@ with open('./res/order.txt', 'w', encoding='utf-8') as f:
 #     f.write('\n'.join(sorted(dict - oracle)))
 
 
-# oracle = set(open('./data/dict/dict_label_none.txt', encoding='utf-8').read().split('\n'))
-# with open('./data/dict/dict_label_none_1.txt', 'w', encoding='utf-8') as f:
+# oracle = set(open('./data/dict/train_dict_1.txt', encoding='utf-8').read().split('\n'))
+# a = set(open('./data/dict/train_dict_2.txt', encoding='utf-8').read().split('\n'))
+# oracle = oracle & a
+# with open('./data/dict/train_dict_1.txt', 'w', encoding='utf-8') as f:
 #     oracle = [each.strip() for each in oracle if each != '']
-#     f.write('\n'.join(sorted(oracle,key=lambda x:(len(x),x))))
+#     f.write('\n'.join(sorted(oracle, key=lambda x: (len(x), x))))
 
 # dict = set(open('./data/dict/dict.txt', encoding='utf-8').read().split('\n'))
 # # with open('./data/dict/dict_1.txt', 'w', encoding='utf-8') as f:
