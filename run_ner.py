@@ -5,7 +5,7 @@
 运行 BERT NER Server
 #@Time    : 2019/1/26 21:00
 # @Author  : MaCan (ma_cancan@163.com)
-# @File    : run.py
+# @File    : run_ner.py
 """
 
 from __future__ import absolute_import

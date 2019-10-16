@@ -2,24 +2,25 @@ import re
 from collections import Counter
 
 import codecs
-remove = set(open('./data/dict/remove.txt').read().split('\n'))
-if '' in remove: remove.remove('')
 
-results = open('./res/best.csv').read().split('\n')
-if results[-1] == '':
-    results = results[:-1]
-res = codecs.open('./res/best.csv', 'w')
-res.write('id,unknownEntities\n')
-for line in results[1:]:
-    if ',' in line:
-        id, entities = line.split(',')
-        entities = entities.split(';')
-        tmp = [each for each in entities if each not in remove]
-        res.write('%s,%s\n' % (id, ';'.join(tmp)))
-    else:
-        res.write('%s\n' % line)
-
+# remove = set(open('./data/dict/remove.txt').read().split('\n'))
+# if '' in remove: remove.remove('')
 #
+# results = open('./res/best.csv').read().split('\n')
+# if results[-1] == '':
+#     results = results[:-1]
+# res = codecs.open('./res/best.csv', 'w')
+# res.write('id,unknownEntities\n')
+# for line in results[1:]:
+#     if ',' in line:
+#         id, entities = line.split(',')
+#         entities = entities.split(';')
+#         tmp = [each for each in entities if each not in remove]
+#         res.write('%s,%s\n' % (id, ';'.join(tmp)))
+#     else:
+#         res.write('%s\n' % line)
+
+
 # a = open('./res/test_completion.csv', encoding='utf-8').read().split('\n')
 # tmp = []
 # for i in range(1, len(a)):
@@ -30,15 +31,17 @@ for line in results[1:]:
 #         id = a[i]
 #     entities = entities.split(';')
 #     tmp.extend(entities)
-# xx = []
-# C = list(Counter(tmp).items())
-# C.sort(key=lambda k: k[1], reverse=True)
-# cnt = 0
-# for each in C:
-#     if each[0] != '':
-#         xx.append(each[0] + ' ' + str(each[1]))
+#
+# tmp = list(set(tmp))
+# tmp.sort(key=lambda k: (k, len(k)))
+# # C = list(Counter(tmp).items())
+# # C.sort(key=lambda k: k[1], reverse=True)
+# # cnt = 0
+# # for each in C:
+# #     if each[0] != '':
+# #         xx.append(each[0] + ' ' + str(each[1]))
 # with open('./res/order.txt', 'w', encoding='utf-8') as f:
-#     f.write('\n'.join(xx))
+#     f.write('\n'.join(tmp))
 
 # try:
 #     if each[0][-1].isdigit():
@@ -47,26 +50,26 @@ for line in results[1:]:
 # except:
 #     pass
 
-# a = open('./res/test.csv', encoding='utf-8').read().split('\n')
-# b = open('./res/best.csv', encoding='utf-8').read().split('\n')
-# with open('./res/extra.csv', 'w', encoding='utf-8') as f:
-#     f.write('id,unknownEntities\n')
-#     for i in range(1, len(a)):
-#         a_entities = ''
-#         b_entities = ''
-#         if ',' in a[i]:
-#             a_id, a_entities = a[i].split(',')
-#         else:
-#             a_id = a[i]
-#         if ',' in b[i]:
-#             b_id, b_entities = b[i].split(',')
-#         else:
-#             b_id = b[i]
-#         assert (a_id == b_id)
-#         a_entities = a_entities.split(';')
-#         b_entities = b_entities.split(';')
-#         entities = set(a_entities) - set(b_entities)
-#         f.write('%s,%s\n' % (a_id, ';'.join(list(entities))))
+a = open('./res/test_completion.csv', encoding='utf-8').read().split('\n')
+b = open('./res/best.csv', encoding='utf-8').read().split('\n')
+with open('./res/extra.csv', 'w', encoding='utf-8') as f:
+    f.write('id,unknownEntities\n')
+    for i in range(1, len(a) - 1):
+        a_entities = ''
+        b_entities = ''
+        if ',' in a[i]:
+            a_id, a_entities = a[i].split(',')
+        else:
+            a_id = a[i]
+        if ',' in b[i]:
+            b_id, b_entities = b[i].split(',')
+        else:
+            b_id = b[i]
+        assert (a_id == b_id)
+        a_entities = a_entities.split(';')
+        b_entities = b_entities.split(';')
+        entities = set(a_entities) & set(b_entities)
+        f.write('%s,%s\n' % (a_id, ';'.join(list(entities))))
 
 # def judge_pure_english(keyword):
 #     return all(ord(c) < 128 for c in keyword)

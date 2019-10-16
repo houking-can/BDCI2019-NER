@@ -314,77 +314,7 @@ def gen_csv(mode='test'):
 #     return unknown_entities
 
 
-def completion(candidates, context):
-    remove_char = {']', '：', '~', '！', '%', '[', '《', '】', ';', ':', '》', '？', '>', '/', '#', '。', '；', '&', '=',
-                   '，',
-                   '【', '@', '、', '|', ',', '”', '?'}
-
-    context = context[1] + '。' + context[2]
-    tmp = []
-    for each in candidates:
-        index = context.find(each)
-        ex = 1
-        if context.count(each) > 1:
-            for i in range(1, len(context) - index - len(each)):
-                if context.count(each) != context.count(context[index:index + i + len(each)]):
-                    ex = i
-                    break
-
-            new = context[index:index + ex - 1 + len(each)]
-            flag = True
-            if len(new) < 22 and len(re.findall("\\" + "|\\".join(remove_char), new)) == 0:
-                try:
-                    xx = re.findall('(%s.*?)(理财|集团|控股|平台|银行|公司|资本|投资|生态|策略|控股集团)' % each, new)
-                    if xx:
-                        flag = False
-                        new = xx[0][0] + xx[0][1]
-                        if context.count(each) == context.count(new):
-                            tmp.append(new)
-                        else:
-                            tmp.append(each)
-                            tmp.append(new)
-                    else:
-                        if ex > 1:
-                            if len(each) <= 3 and len(new) == 4:
-                                tmp.append(new)
-                                # print(each, new)
-
-                            flag = False
-                except:
-                    pass
-
-            if flag:
-                tmp.append(each)
-        else:
-            # xx = re.findall('(%s.*?)(理财|集团|控股|平台|银行|公司|资本|投资|生态|策略|控股集团)' % each, context)
-            # if xx:
-            #     new = xx[0][0] + xx[0][1]
-            #     if len(new) < 22 and len(re.findall("\\" + "|\\".join(add_char), new)) == 0:
-            #         print(each, new)
-            #     each = new
-            tmp.append(each)
-
-    tmp = list(set(tmp))
-
-    xx = []
-    for w in tmp:
-        if w in remove or w in predict_dictionary:
-            continue
-        xx.append((context.count(w), w))
-    xx.sort(key=lambda k: (k[0], len(k[1])), reverse=True)
-
-    res = []
-    for i in range(len(xx) - 1):
-        if xx[i + 1][0] == xx[i][0] and xx[i + 1][1].startswith(xx[i][1]):
-            continue
-        res.append(xx[i][1])
-    if len(xx) > 0:
-        res.append(xx[-1][1])
-
-    return res
-
-
-def process_data():
+def pre_process():
     print('process train.csv...')
     with open('./data/old/Train_Data_Hand.csv', 'r', encoding='utf-8') as myFile:
         lines = list(csv.reader(myFile))
@@ -431,49 +361,10 @@ def clean(line):
     return line
 
 
-def back_process(mode='test'):
-    print('after treatment...')
-    results = open('./res/%s.csv' % mode).read().split('\n')
-    # results = open('./res/best.csv').read().split('\n')
-    if results[-1] == '':
-        results = results[:-1]
-    res = codecs.open('./res/%s_completion.csv' % mode, 'w')
-    # res = codecs.open('./res/best.csv', 'w')
 
-    res.write('id,unknownEntities\n')
-
-    with open('./data/old/T%s_Data.csv' % mode[1:], 'r', encoding='utf-8') as myFile:
-        lines = list(csv.reader(myFile))
-        if lines[-1] == '':
-            lines = lines[:-1]
-        for i in range(1, len(lines)):
-            id, candidates = results[i].split(',')
-            candidates = candidates.split(';')
-            entity = completion(candidates, lines[i])
-            res.write('{0},{1}\n'.format(id, ';'.join(entity)))
-    res.close()
-
-
-def remove_entity(mode='test'):
-    print('Removing entities...')
-    results = open('./res/%s_completion.csv' % mode).read().split('\n')
-    if results[-1] == '':
-        results = results[:-1]
-    res = codecs.open('./res/%s_completion.csv' % mode, 'w')
-    res.write('id,unknownEntities\n')
-    for line in results[1:]:
-        if ',' in line:
-            id, entities = line.split(',')
-            entities = entities.split(';')
-            tmp = [each for each in entities if each not in remove]
-            res.write('%s,%s\n' % (id, ';'.join(tmp)))
-        else:
-            res.write('%s\n' % line)
 
 
 if __name__ == "__main__":
-    # process_data()
+    pre_process()
     # gen_bio()
     # gen_csv(mode='test')
-    back_process(mode='test')
-    # remove_entity()
