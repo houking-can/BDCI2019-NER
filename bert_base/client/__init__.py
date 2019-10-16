@@ -67,7 +67,7 @@ class BertClient(object):
         :param ip: the ip address of the server
         :param port: port for pushing data from client to server, must be consistent with the server side config
         :param port_out: port for publishing results from server to client, must be consistent with the server side config
-        :param output_fmt: the output format of the sentence encodes, either in numpy array or python List[List[float]] (ndarray/list)
+        :param output_fmt: the ner_output format of the sentence encodes, either in numpy array or python List[List[float]] (ndarray/list)
         :param show_server_config: whether to show server configs when first connected
         :param identity: the UUID of this client
         :param check_version: check if server has the same version as client, raise AttributeError if not the same

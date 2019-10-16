@@ -10,6 +10,9 @@ predict_dictionary = open('./data/dict/dict_oracle.txt').read().split('\n')
 predict_dictionary = [each.strip() for each in predict_dictionary]
 predict_dictionary = set([each for each in predict_dictionary if each != ''])
 
+remove = set(open('./data/dict/remove.txt').read().split('\n'))
+if '' in remove: remove.remove('')
+
 none = set(open('./data/dict/dict_label_none.txt').read().split('\n'))
 none = [each.strip() for each in none]
 none = set([each for each in none if each != ''])
@@ -246,6 +249,9 @@ def filter_word(w):
     if w.endswith('.'):
         return ''
 
+    if w in remove:
+        return ''
+
     return w
 
 
@@ -254,8 +260,8 @@ def judge_pure_english(keyword):
 
 
 def gen_csv(mode='test'):
-    predict = codecs.open('./output/label_%s.txt' % mode).read().split('\n\n')
-    save_name = './res/%s.csv' % mode
+    predict = codecs.open('./ner_output/label_%s.txt' % mode).read().split('\n\n')
+    save_name = './res/ner_%s.csv' % mode
     if os.path.exists(save_name):
         os.remove(save_name)
     res = codecs.open(save_name, 'w')
@@ -346,6 +352,7 @@ def clean(line):
 
 
 if __name__ == "__main__":
-    pre_process()
+    # pre_process()
     # gen_bio()
-    # gen_csv(mode='test')
+    gen_csv(mode='test')
+    pass

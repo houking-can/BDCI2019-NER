@@ -32,11 +32,11 @@ def judge_pure_english(keyword):
 
 def post_process(mode='test'):
     print('Post process...')
-    results = open('./res/%s.csv' % mode).read().split('\n')
+    results = open('./res/ner_%s.csv' % mode).read().split('\n')
     # results = open('./res/best.csv').read().split('\n')
     if results[-1] == '':
         results = results[:-1]
-    res = codecs.open('./res/%s_completion.csv' % mode, 'w')
+    res = codecs.open('./res/ner_post_%s.csv' % mode, 'w')
     # res = codecs.open('./res/best.csv', 'w')
 
     res.write('id,unknownEntities\n')
@@ -122,44 +122,32 @@ def completion(candidates, context):
 
 def remove_entity(mode='test'):
     print('Removing entities...')
-    results = open('./res/%s_completion.csv' % mode).read().split('\n')
+    results = open('./res/ner_post_%s.csv' % mode).read().split('\n')
     if results[-1] == '':
         results = results[:-1]
-    res = codecs.open('./res/%s_completion.csv' % mode, 'w')
+    res = codecs.open('./res/ner_post_%s.csv' % mode, 'w')
     res.write('id,unknownEntities\n')
-    a = []
     for line in results[1:]:
         if ',' in line:
             id, entities = line.split(',')
             entities = entities.split(';')
             tmp = []
             for each in entities:
-                if each in remove or each in predict_dictionary:
+                if each in predict_dictionary:
                     continue
-
-                # if judge_pure_english(each):
-                # print(each)
-                # a.append(each)
-                # continue
                 tmp.append(each)
-            # for each in tmp:
-            #     if each.startswith('微信'):
-            #         a.add(each)
             res.write('%s,%s\n' % (id, ';'.join(tmp)))
         else:
             res.write('%s\n' % line)
-    # a=list(set(a))
-    # a.sort(key=lambda k:(k,len(k)))
-    # print('\n'.join(a))
 
-    a = open('./res/test_completion.csv', encoding='utf-8').read().split('\n')
+    lines = open('./res/ner_%s.csv' % mode, encoding='utf-8').read().split('\n')
     tmp = []
-    for i in range(1, len(a)):
+    for i in range(1, len(lines)):
         entities = ''
-        if ',' in a[i]:
-            id, entities = a[i].split(',')
+        if ',' in lines[i]:
+            id, entities = lines[i].split(',')
         else:
-            id = a[i]
+            id = lines[i]
         entities = entities.split(';')
         tmp.extend(entities)
 
@@ -171,7 +159,7 @@ def remove_entity(mode='test'):
     # for each in C:
     #     if each[0] != '':
     #         xx.append(each[0] + ' ' + str(each[1]))
-    with open('./res/order.txt', 'w', encoding='utf-8') as f:
+    with open('./res/entities.txt', 'w', encoding='utf-8') as f:
         f.write('\n'.join(tmp))
 
 

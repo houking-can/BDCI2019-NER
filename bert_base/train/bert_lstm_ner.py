@@ -523,10 +523,10 @@ def train(args):
                 del_file(args.output_dir)
             except Exception as e:
                 print(e)
-                print('pleace remove the files of output dir and data.conf')
+                print('pleace remove the files of ner_output dir and data.conf')
                 exit(-1)
 
-    # check output dir exists
+    # check ner_output dir exists
     if not os.path.exists(args.output_dir):
         os.mkdir(args.output_dir)
 

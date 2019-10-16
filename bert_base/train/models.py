@@ -94,7 +94,7 @@ def create_model(bert_config, is_training, input_ids, input_mask,
     # 算序列真实长度
     used = tf.sign(tf.abs(input_ids))
     lengths = tf.reduce_sum(used, reduction_indices=1)  # [batch_size] 大小的向量，包含了当前batch中的序列长度
-    # 添加CRF output layer
+    # 添加CRF ner_output layer
     blstm_crf = BLSTM_CRF(embedded_chars=embedding, hidden_unit=lstm_size, cell_type=cell, num_layers=num_layers,
                           dropout_rate=dropout_rate, initializers=initializers, num_labels=num_labels,
                           seq_length=max_seq_length, labels=labels, lengths=lengths, is_training=is_training)

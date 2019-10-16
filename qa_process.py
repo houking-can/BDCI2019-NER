@@ -5,29 +5,8 @@ from tqdm import tqdm
 import pandas as pd
 import random
 import os
-
-predict_dictionary = open('./data/dict/dict_oracle.txt').read().split('\n')
-predict_dictionary = [each.strip() for each in predict_dictionary]
-predict_dictionary = set([each for each in predict_dictionary if each != ''])
-
-remove = set(open('./data/dict/remove.txt').read().split('\n'))
-if '' in remove: remove.remove('')
-
-none = set(open('./data/dict/dict_label_none.txt').read().split('\n'))
-none = [each.strip() for each in none]
-none = set([each for each in none if each != ''])
-none = none - predict_dictionary
-
-train_dict = open('./data/dict/train_dict_2.txt').read().split('\n')
-train_dict = [each.strip() for each in train_dict]
-train_dict = set([each for each in train_dict if each != ''])
-train_dict = train_dict - none - predict_dictionary
-
-bio_dictionary = list(predict_dictionary | train_dict | none)
-# bio_dictionary = list(set(predict_dictionary))
-bio_dictionary = sorted(bio_dictionary, key=lambda e: len(e), reverse=True)
-
-assert ('' not in bio_dictionary)
+import json
+import uuid
 
 
 def read_csv():
@@ -65,7 +44,7 @@ def get_sentences(text, max_length=128):
     return sentences
 
 
-def gen_bio():
+def gen_json():
     train_df, test_df = read_csv()
     additional_chars = set()
     for t in list(test_df.text) + list(train_df.text):
@@ -137,123 +116,12 @@ def gen_bio():
                 up.write('\n')
 
 
-def check_brackets(w):
-    w = w.rstrip('（')
-    w = w.rstrip('(')
-    w = w.lstrip(')')
-    w = w.lstrip('）')
-    cnt_chinese = 0
-    cnt_english = 0
-    for c in w:
-        if c == '（':
-            cnt_chinese += 1
-        elif c == '）':
-            cnt_chinese -= 1
-    for c in w:
-        if c == '(':
-            cnt_english += 1
-        elif c == ')':
-            cnt_english -= 1
-
-    if cnt_chinese == 0 and cnt_english == 0:
-        if w.startswith('（') and w.endswith('）'):
-            return w[1:-1]
-        if w.startswith('(') and w.endswith(')'):
-            return w[1:-1]
-        return w
-
-    if cnt_chinese > 0:
-        if not w.startswith('（'):
-            return w + '）'
-        return w[1:]
-    if cnt_chinese < 0:
-        if not w.endswith('）'):
-            return '（' + w
-        return w[:-1]
-    if cnt_english > 0:
-        if not w.startswith('('):
-            return w + ')'
-        return w[1:]
-    if cnt_english < 0:
-        if not w.endswith(')'):
-            return '(' + w
-        return w[:-1]
-
-
-def check_quotation(w):
-    w = w.lstrip('”')
-    w = w.lstrip('’')
-    w = w.rstrip('“')
-    w = w.rstrip('‘')
-
-    cnt_double = 0
-    cnt_single = 0
-    for c in w:
-        if c == '“':
-            cnt_double += 1
-        elif c == '”':
-            cnt_double -= 1
-    for c in w:
-        if c == '‘':
-            cnt_single += 1
-        elif c == '’':
-            cnt_single -= 1
-
-    if cnt_double == 0 and cnt_single == 0:
-        if w.startswith('“') and w.endswith('”'):
-            return w[1:-1]
-        if w.startswith('‘') and w.endswith('’'):
-            return w[1:-1]
-        return w
-
-    if cnt_double > 0:
-        if not w.startswith('“'):
-            return w + '”'
-        return w[1:]
-    if cnt_double < 0:
-        if not w.endswith('”'):
-            return '“' + w
-        return w[:-1]
-    if cnt_single > 0:
-        if not w.startswith('‘'):
-            return w + '’'
-        return w[1:]
-    if cnt_single < 0:
-        if not w.endswith('’'):
-            return '‘' + w
-        return w[:-1]
-
-
-def filter_word(w):
-    add_char = {']', '：', '~', '！', '%', '[', '《', '】', ';', ':', '》', '？', '>', '/', '#', '。', '；', '&', '=', '，',
-                '【', '@', '、', '|', '大学', '中学', '小学'}
-    if w == '':
-        return ''
-
-    if re.findall("\\" + "|\\".join(add_char), w):
-        return ''
-
-    if 'CEO' in w:
-        w = w.replace('CEO', '')
-    if judge_pure_english(w) and len(w) == 2:
-        return ''
-
-    w = check_brackets(w)
-    w = check_quotation(w)
-    if w.isnumeric():
-        return ''
-    if len(w) == 1:
-        return ''
-
-    return w
-
-
 def judge_pure_english(keyword):
     return all(ord(c) < 128 for c in keyword)
 
 
 def gen_csv(mode='test'):
-    predict = codecs.open('./output/label_%s.txt' % mode).read().split('\n\n')
+    predict = codecs.open('./ner_output/label_%s.txt' % mode).read().split('\n\n')
     save_name = './res/%s.csv' % mode
     if os.path.exists(save_name):
         os.remove(save_name)
@@ -297,23 +165,6 @@ def gen_csv(mode='test'):
     res.close()
 
 
-# def select_candidates(unknown_entities):
-#     unknown_entities = list(unknown_entities)
-#     tmp = sorted(unknown_entities, key=lambda e: len(e))
-#     if tmp != []:
-#         unknown_entities = []
-#         for i in range(len(tmp) - 1):
-#             flag = True
-#             for j in range(i + 1, len(tmp)):
-#                 if tmp[i] in tmp[j]:
-#                     flag = False
-#                     break
-#             if flag:
-#                 unknown_entities.append(tmp[i])
-#         unknown_entities.append(tmp[-1])
-#     return unknown_entities
-
-
 def pre_process():
     print('process train.csv...')
     with open('./data/old/Train_Data_Hand.csv', 'r', encoding='utf-8') as myFile:
@@ -347,6 +198,7 @@ def clean(line):
     # remove title is the same as text
     if len(line[1]) > 40 and line[2].startswith(line[1][:-9]):
         line[1] = ''
+    print(len(line[1]))
     for i in range(1, 3):
         if line[i] != '':
             line[i] = line[i].replace(",", "，")
@@ -358,13 +210,11 @@ def clean(line):
             line[i] = re.sub('\?\?+', '', line[i])
             line[i] = re.sub('\{IMG:.?.?.?\}', '', line[i])
             line[i] = re.sub('\t|\n', '', line[i])
+            line[i] = re.sub('\<.*?\>', '', line[i])
     return line
 
 
-
-
-
 if __name__ == "__main__":
-    pre_process()
-    # gen_bio()
+    # pre_process()
+    gen_json()
     # gen_csv(mode='test')

@@ -48,7 +48,7 @@ flags.DEFINE_string("vocab_file", None,
 
 flags.DEFINE_string(
     "output_dir", None,
-    "The output directory where the model checkpoints will be written.")
+    "The ner_output directory where the model checkpoints will be written.")
 
 ## Other parameters
 
@@ -552,7 +552,7 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   # In the demo, we are doing a simple classification task on the entire
   # segment.
   #
-  # If you want to use the token-level output, use model.get_sequence_output()
+  # If you want to use the token-level ner_output, use model.get_sequence_output()
   # instead.
   output_layer = model.get_pooled_output()
 

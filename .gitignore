@@ -1,6 +1,8 @@
-output/
+ner_output/
 data/
 checkpoint/
 .idea/
-/res
+res/
+qa_output/
+
 

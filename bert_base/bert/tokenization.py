@@ -87,7 +87,7 @@ def convert_by_vocab(vocab, items):
   output = []
   for item in items:
     #TODO: modify for oov, using [unk] replace, if you using english language do not change this
-    # output.append(vocab.[item])
+    # ner_output.append(vocab.[item])
     output.append(vocab.get(item, 100))
   return output
 
@@ -264,7 +264,7 @@ class WordpieceTokenizer(object):
 
     For example:
       input = "unaffable"
-      output = ["un", "##aff", "##able"]
+      ner_output = ["un", "##aff", "##able"]
 
     Args:
       text: A single token or whitespace separated tokens. This should have

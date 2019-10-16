@@ -28,7 +28,7 @@ def get_args_parser():
     group1.add_argument('-data_dir', type=str, default=os.path.join(root_path, 'data'),
                         help='train, dev and test data dir')
     group1.add_argument('-bert_config_file', type=str, default=os.path.join(bert_path, 'bert_config.json'))
-    group1.add_argument('-output_dir', type=str, default=os.path.join(root_path, 'output'),
+    group1.add_argument('-output_dir', type=str, default=os.path.join(root_path, 'ner_output'),
                         help='directory of a pretrained BERT model')
     group1.add_argument('-init_checkpoint', type=str, default=os.path.join(bert_path, 'bert_model.ckpt'),
                         help='Initial checkpoint (usually from a pre-trained BERT model).')

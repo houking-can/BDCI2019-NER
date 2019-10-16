@@ -6,7 +6,7 @@
 # - accept any space as delimiter by default
 # - optional file argument (default STDIN)
 # - option to set boundary (-b argument)
-# - LaTeX output (-l argument) not supported
+# - LaTeX ner_output (-l argument) not supported
 # - raw tags (-r argument) not supported
 
 # add function :evaluate(predicted_label, ori_label): which will not read from file

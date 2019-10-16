@@ -426,7 +426,7 @@ def main(_):
       rng)
 
   output_files = FLAGS.output_file.split(",")
-  tf.logging.info("*** Writing to output files ***")
+  tf.logging.info("*** Writing to ner_output files ***")
   for output_file in output_files:
     tf.logging.info("  %s", output_file)
 

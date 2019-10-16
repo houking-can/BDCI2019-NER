@@ -248,11 +248,11 @@ class BertModel(object):
     return self.all_encoder_layers
 
   def get_embedding_output(self):
-    """Gets output of the embedding lookup (i.e., input to the transformer).
+    """Gets ner_output of the embedding lookup (i.e., input to the transformer).
 
     Returns:
       float Tensor of shape [batch_size, seq_length, hidden_size] corresponding
-      to the output of the embedding layer, after summing the word
+      to the ner_output of the embedding layer, after summing the word
       embeddings with the positional embeddings and the token type embeddings,
       then performing layer normalization. This is the input to the transformer.
     """
@@ -456,7 +456,7 @@ def embedding_postprocessor(input_tensor,
     max_position_embeddings: int. Maximum sequence length that might ever be
       used with this model. This can be longer than the sequence length of
       input_tensor, but cannot be shorter.
-    dropout_prob: float. Dropout probability applied to the final output tensor.
+    dropout_prob: float. Dropout probability applied to the final ner_output tensor.
 
   Returns:
     float tensor with same shape as `input_tensor`.
@@ -607,9 +607,9 @@ def attention_layer(from_tensor,
     attention_probs_dropout_prob: (optional) float. Dropout probability of the
       attention probabilities.
     initializer_range: float. Range of the weight initializer.
-    do_return_2d_tensor: bool. If True, the output will be of shape [batch_size
+    do_return_2d_tensor: bool. If True, the ner_output will be of shape [batch_size
       * from_seq_length, num_attention_heads * size_per_head]. If False, the
-      output will be of shape [batch_size, from_seq_length, num_attention_heads
+      ner_output will be of shape [batch_size, from_seq_length, num_attention_heads
       * size_per_head].
     batch_size: (Optional) int. If the input is 2D, this might be the batch size
       of the 3D version of the `from_tensor` and `to_tensor`.
@@ -785,7 +785,7 @@ def transformer_model(input_tensor,
     intermediate_size: int. The size of the "intermediate" (a.k.a., feed
       forward) layer.
     intermediate_act_fn: function. The non-linear activation function to apply
-      to the output of the intermediate/feed-forward layer.
+      to the ner_output of the intermediate/feed-forward layer.
     hidden_dropout_prob: float. Dropout probability for the hidden layers.
     attention_probs_dropout_prob: float. Dropout probability of the attention
       probabilities.
@@ -856,7 +856,7 @@ def transformer_model(input_tensor,
 
         # Run a linear projection of `hidden_size` then add a residual
         # with `layer_input`.
-        with tf.variable_scope("output"):
+        with tf.variable_scope("ner_output"):
           attention_output = tf.layers.dense(
               attention_output,
               hidden_size,
@@ -873,7 +873,7 @@ def transformer_model(input_tensor,
             kernel_initializer=create_initializer(initializer_range))
 
       # Down-project back to `hidden_size` then add the residual.
-      with tf.variable_scope("output"):
+      with tf.variable_scope("ner_output"):
         layer_output = tf.layers.dense(
             intermediate_output,
             hidden_size,
