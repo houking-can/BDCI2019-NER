@@ -54,7 +54,7 @@ def read_csv():
     return train_df, test_df
 
 
-def get_sentences(text, max_length=128):
+def get_sentences(text, max_length=512):
     # if len(text) <= max_length - 2:
     #     return [text]
     tmp = re.split('(。|！|？|；|，|\?|\!)', text)
@@ -73,7 +73,6 @@ def get_sentences(text, max_length=128):
             sent = ''
         if tmp[i] != '':
             sent += (tmp[i] + tmp[i + 1])
-
         i += 2
     if sent != '':
         sentences.append(sent)
@@ -336,9 +335,6 @@ def pre_process():
 
 
 def clean(line):
-    # remove title is the same as text
-    if len(line[1]) > 40 and line[2].startswith(line[1][:-9]):
-        line[1] = ''
     for i in range(1, 3):
         if line[i] != '':
             line[i] = line[i].replace(",", "，")

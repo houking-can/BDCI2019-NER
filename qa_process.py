@@ -215,11 +215,6 @@ def pre_process():
 
 
 def clean(line):
-    # remove title is the same as text
-    # if len(line[1]) > 40 and line[2].startswith(line[1][:-9]):
-    #     line[1] = ''
-    # if len(line[1]) > 180:
-    #     print(len(line[1]))
 
     for i in range(1, 3):
         if line[i] != '':
@@ -237,6 +232,6 @@ def clean(line):
 
 
 if __name__ == "__main__":
-    # pre_process()
+    pre_process()
     gen_json()
     # gen_csv(mode='test')
