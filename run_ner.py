@@ -300,7 +300,7 @@ def main():
                         help="The input data dir. Should contain the training files for the CoNLL-2003 NER task.")
     parser.add_argument("--model_type", default="bert", type=str,
                         help="Model type selected in the list: " + ", ".join(MODEL_CLASSES.keys()))
-    parser.add_argument("--model_name_or_path", default="/home/yhj/competitions/QA_BDCI/bert/", type=str,
+    parser.add_argument("--model_name_or_path", default="/home/yhj/competitions/BDCI/bert/", type=str,
                         help="Path to pre-trained model or shortcut name selected in the list: " + ", ".join(
                             ALL_MODELS))
     parser.add_argument("--output_dir", default="./ner_output", type=str,
@@ -331,7 +331,7 @@ def main():
 
     parser.add_argument("--per_gpu_train_batch_size", default=4, type=int,
                         help="Batch size per GPU/CPU for training.")
-    parser.add_argument("--per_gpu_eval_batch_size", default=16, type=int,
+    parser.add_argument("--per_gpu_eval_batch_size", default=256, type=int,
                         help="Batch size per GPU/CPU for evaluation.")
     parser.add_argument("--gradient_accumulation_steps", type=int, default=1,
                         help="Number of updates steps to accumulate before performing a backward/update pass.")

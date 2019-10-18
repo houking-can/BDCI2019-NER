@@ -4,7 +4,7 @@ import re
 from tqdm import tqdm
 import pandas as pd
 import random
-import os
+
 
 predict_dictionary = open('./data/dict/dict_oracle.txt').read().split('\n')
 predict_dictionary = [each.strip() for each in predict_dictionary]
@@ -138,173 +138,6 @@ def gen_bio():
                 up.write('\n')
 
 
-def check_brackets(w):
-    w = w.rstrip('（')
-    w = w.rstrip('(')
-    w = w.lstrip(')')
-    w = w.lstrip('）')
-    cnt_chinese = 0
-    cnt_english = 0
-    for c in w:
-        if c == '（':
-            cnt_chinese += 1
-        elif c == '）':
-            cnt_chinese -= 1
-    for c in w:
-        if c == '(':
-            cnt_english += 1
-        elif c == ')':
-            cnt_english -= 1
-
-    if cnt_chinese == 0 and cnt_english == 0:
-        if w.startswith('（') and w.endswith('）'):
-            return w[1:-1]
-        if w.startswith('(') and w.endswith(')'):
-            return w[1:-1]
-        return w
-
-    if cnt_chinese > 0:
-        if not w.startswith('（'):
-            return w + '）'
-        return w[1:]
-    if cnt_chinese < 0:
-        if not w.endswith('）'):
-            return '（' + w
-        return w[:-1]
-    if cnt_english > 0:
-        if not w.startswith('('):
-            return w + ')'
-        return w[1:]
-    if cnt_english < 0:
-        if not w.endswith(')'):
-            return '(' + w
-        return w[:-1]
-
-
-def check_quotation(w):
-    w = w.lstrip('”')
-    w = w.lstrip('’')
-    w = w.rstrip('“')
-    w = w.rstrip('‘')
-
-    cnt_double = 0
-    cnt_single = 0
-    for c in w:
-        if c == '“':
-            cnt_double += 1
-        elif c == '”':
-            cnt_double -= 1
-    for c in w:
-        if c == '‘':
-            cnt_single += 1
-        elif c == '’':
-            cnt_single -= 1
-
-    if cnt_double == 0 and cnt_single == 0:
-        if w.startswith('“') and w.endswith('”'):
-            return w[1:-1]
-        if w.startswith('‘') and w.endswith('’'):
-            return w[1:-1]
-        return w
-
-    if cnt_double > 0:
-        if not w.startswith('“'):
-            return w + '”'
-        return w[1:]
-    if cnt_double < 0:
-        if not w.endswith('”'):
-            return '“' + w
-        return w[:-1]
-    if cnt_single > 0:
-        if not w.startswith('‘'):
-            return w + '’'
-        return w[1:]
-    if cnt_single < 0:
-        if not w.endswith('’'):
-            return '‘' + w
-        return w[:-1]
-
-
-def filter_word(w):
-    add_char = {']', '：', '~', '！', '%', '[', '《', '】', ';', ':', '》', '？', '>', '/', '#', '。', '；', '&', '=', '，',
-                '【', '@', '、', '|', '大学', '中学', '小学'}
-    if w == '':
-        return ''
-
-    if re.findall("\\" + "|\\".join(add_char), w):
-        return ''
-
-    if 'CEO' in w:
-        w = w.replace('CEO', '')
-
-    if judge_pure_english(w) and len(w) == 2:
-        return ''
-
-    w = check_brackets(w)
-    w = check_quotation(w)
-    if w.isnumeric():
-        return ''
-    if len(w) == 1:
-        return ''
-
-    if w.endswith('.'):
-        return ''
-
-    if w in remove:
-        return ''
-
-    return w
-
-
-def judge_pure_english(keyword):
-    return all(ord(c) < 128 for c in keyword)
-
-
-def gen_csv(mode='test'):
-    predict = codecs.open('./ner_output/label_%s.txt' % mode).read().split('\n\n')
-    save_name = './res/ner_%s.csv' % mode
-    if os.path.exists(save_name):
-        os.remove(save_name)
-    res = codecs.open(save_name, 'w')
-    res.write('id,unknownEntities\n')
-    id = ''
-    unknown_entities = set()
-    for sent in tqdm(predict):
-        sent = sent.split('\n')
-        entity = ''
-        for each in sent:
-            if each == '':
-                continue
-            tmp_id = re.findall('Ж(.*?)Ж', each)
-            if len(tmp_id) == 1:
-                if id != '':
-                    # unknown_entities = select_candidates(unknown_entities)
-                    res.write('{0},{1}\n'.format(id, ';'.join(list(unknown_entities))))
-                id = tmp_id[0]
-                unknown_entities = set()
-                continue
-            word, _, tag = each.split()
-            if tag == 'B-ORG':
-                if entity == '':
-                    entity = word
-                else:
-                    entity = filter_word(entity)
-                    if entity != '':
-                        unknown_entities.add(entity)
-                    entity = ''
-            elif tag == 'I-ORG':
-                if entity != '':
-                    entity += word
-            else:
-                entity = filter_word(entity)
-                if entity != '':
-                    unknown_entities.add(entity)
-                entity = ''
-    # unknown_entities = select_candidates(unknown_entities)
-    res.write('{0},{1}\n'.format(id, ';'.join(list(unknown_entities))))
-    res.close()
-
-
 def pre_process():
     print('process train.csv...')
     with open('./data/old/Train_Data_Hand.csv', 'r', encoding='utf-8') as myFile:
@@ -354,5 +187,4 @@ def clean(line):
 if __name__ == "__main__":
     pre_process()
     gen_bio()
-    # gen_csv(mode='test')
-    pass
+

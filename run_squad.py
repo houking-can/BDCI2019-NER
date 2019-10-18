@@ -348,7 +348,7 @@ def main():
                         help="SQuAD json for predictions. E.g., dev-v1.1.json or test-v1.1.json")
     parser.add_argument("--model_type", default="bert", type=str,
                         help="Model type selected in the list: " + ", ".join(MODEL_CLASSES.keys()))
-    parser.add_argument("--model_name_or_path", default="/home/yhj/competitions/QA_BDCI/bert/", type=str,
+    parser.add_argument("--model_name_or_path", default="/home/yhj/competitions/BDCI/bert/", type=str,
                         help="Path to pre-trained model or shortcut name selected in the list: " + ", ".join(
                             ALL_MODELS))
     parser.add_argument("--output_dir", default="./qa_output", type=str,
