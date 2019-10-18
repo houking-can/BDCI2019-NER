@@ -1,6 +1,5 @@
 ner_output/
 data/
-checkpoint/
 .idea/
 res/
 qa_output/
