@@ -32,8 +32,8 @@ def judge_pure_english(keyword):
 
 def post_process(mode='test'):
     print('Post process...')
-    results = open('./res/ner_%s.csv' % mode).read().split('\n')
-    # results = open('./res/best.csv').read().split('\n')
+    # results = open('./res/ner_%s.csv' % mode).read().split('\n')
+    results = open('./res/best.csv').read().split('\n')
     if results[-1] == '':
         results = results[:-1]
     res = codecs.open('./res/ner_post_%s.csv' % mode, 'w')
@@ -106,17 +106,26 @@ def completion(candidates, context):
         cnt = context.count(w)
         # if judge_pure_english(w) and cnt == 1:
         #     continue
-        xx.append((cnt, w))
-    xx.sort(key=lambda k: (k[0], len(k[1])), reverse=True)
+        xx.append((cnt, len(context) - context.find(w), w))
+    xx.sort(key=lambda k: (k[0], k[1]), reverse=True)
 
     res = []
     for i in range(len(xx) - 1):
-        if xx[i + 1][0] == xx[i][0] and xx[i + 1][1].startswith(xx[i][1]):
+        if xx[i + 1][0] == xx[i][0] and xx[i + 1][2].startswith(xx[i][2]):
             continue
-        res.append(xx[i][1])
+        res.append(xx[i])
     if len(xx) > 0:
-        res.append(xx[-1][1])
+        res.append(xx[-1])
 
+    res = [each[2] for each in res]
+    # if len(res) <= 2:
+    #     return [each[2] for each in res]
+    # else:
+    #     tmp = [each[2] for each in res[:2]]
+    #     for i in range(2, len(res)):
+    #         if res[i][0] >= 2 and (len(context) - res[i][1]) < len(context) // 2:
+    #             tmp.append(res[i][2])
+    #     return tmp
     return res
 
 

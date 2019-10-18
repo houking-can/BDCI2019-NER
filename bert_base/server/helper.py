@@ -4,8 +4,8 @@ import os
 import sys
 import uuid
 import pickle
-import zmq
-from zmq.utils import jsonapi
+# import zmq
+# from zmq.utils import jsonapi
 
 __all__ = ['set_logger', 'send_ndarray', 'get_args_parser',
            'check_tf_version', 'auto_bind', 'import_tf']

@@ -623,17 +623,19 @@ def train(args):
 
         # train and eval togither
         # early stop hook
-        early_stopping_hook = tf.contrib.estimator.stop_if_no_decrease_hook(
-            estimator=estimator,
-            metric_name='loss',
-            max_steps_without_decrease=num_train_steps,
-            eval_dir=None,
-            min_steps=0,
-            run_every_secs=None,
-            run_every_steps=args.save_checkpoints_steps)
+        # early_stopping_hook = tf.contrib.estimator.stop_if_no_decrease_hook(
+        #     estimator=estimator,
+        #     metric_name='loss',
+        #     max_steps_without_decrease=num_train_steps,
+        #     eval_dir=None,
+        #     min_steps=0,
+        #     run_every_secs=None,
+        #     run_every_steps=args.save_checkpoints_steps)
 
+        # train_spec = tf.estimator.TrainSpec(input_fn=train_input_fn, max_steps=num_train_steps,
+                                            # hooks=[early_stopping_hook])
         train_spec = tf.estimator.TrainSpec(input_fn=train_input_fn, max_steps=num_train_steps,
-                                            hooks=[early_stopping_hook])
+                                            )
         eval_spec = tf.estimator.EvalSpec(input_fn=eval_input_fn)
         tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
 

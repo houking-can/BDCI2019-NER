@@ -33,29 +33,36 @@ flags = tf.flags
 
 FLAGS = flags.FLAGS
 
+if os.name == 'nt':
+    bert_path = 'F:\chinese_L-12_H-768_A-12'
+    root_path = r'C:\workspace\python\BERT-BiLSTM-CRF-NER'
+else:
+    bert_path = '/home/yhj/competitions/BDCI/checkpoint/chinese_L-12_H-768_A-12'
+    root_path = '/home/yhj/competitions/BDCI/'
+
 ## Required parameters
 flags.DEFINE_string(
-    "bert_config_file", None,
+    "bert_config_file", os.path.join(bert_path, 'bert_config.json'),
     "The config json file corresponding to the pre-trained BERT model. "
     "This specifies the model architecture.")
 
-flags.DEFINE_string("vocab_file", None,
+flags.DEFINE_string("vocab_file", os.path.join(bert_path, 'vocab.txt'),
                     "The vocabulary file that the BERT model was trained on.")
 
 flags.DEFINE_string(
-    "output_dir", None,
+    "output_dir", os.path.join(root_path, 'qa_output'),
     "The ner_output directory where the model checkpoints will be written.")
 
 ## Other parameters
-flags.DEFINE_string("train_file", None,
-                    "SQuAD json for training. E.g., train-v1.1.json")
+flags.DEFINE_string("train_file", os.path.join(root_path, 'data', 'train-v2.0.json'),
+                    "SQuAD json for training. E.g., train-v2.0.json")
 
 flags.DEFINE_string(
-    "predict_file", None,
-    "SQuAD json for predictions. E.g., dev-v1.1.json or test-v1.1.json")
+    "predict_file", os.path.join(root_path, 'data', 'test-v2.0.json'),
+    "SQuAD json for predictions. E.g., dev-v2.0.json or test-v2.0.json")
 
 flags.DEFINE_string(
-    "init_checkpoint", None,
+    "init_checkpoint", os.path.join(bert_path, 'bert_model.ckpt'),
     "Initial checkpoint (usually from a pre-trained BERT model).")
 
 flags.DEFINE_bool(
@@ -64,7 +71,7 @@ flags.DEFINE_bool(
     "models and False for cased models.")
 
 flags.DEFINE_integer(
-    "max_seq_length", 384,
+    "max_seq_length", 180,
     "The maximum total input sequence length after WordPiece tokenization. "
     "Sequences longer than this will be truncated, and sequences shorter "
     "than this will be padded.")
@@ -75,15 +82,15 @@ flags.DEFINE_integer(
     "take between chunks.")
 
 flags.DEFINE_integer(
-    "max_query_length", 64,
+    "max_query_length", 120,
     "The maximum number of tokens for the question. Questions longer than "
     "this will be truncated to this length.")
 
-flags.DEFINE_bool("do_train", False, "Whether to run training.")
+flags.DEFINE_bool("do_train", True, "Whether to run training.")
 
 flags.DEFINE_bool("do_predict", False, "Whether to run eval on the dev set.")
 
-flags.DEFINE_integer("train_batch_size", 32, "Total batch size for training.")
+flags.DEFINE_integer("train_batch_size", 4, "Total batch size for training.")
 
 flags.DEFINE_integer("predict_batch_size", 8,
                      "Total batch size for predictions.")
@@ -98,10 +105,10 @@ flags.DEFINE_float(
     "Proportion of training to perform linear learning rate warmup for. "
     "E.g., 0.1 = 10% of training.")
 
-flags.DEFINE_integer("save_checkpoints_steps", 1000,
+flags.DEFINE_integer("save_checkpoints_steps", 500,
                      "How often to save the model checkpoint.")
 
-flags.DEFINE_integer("iterations_per_loop", 1000,
+flags.DEFINE_integer("iterations_per_loop", 500,
                      "How many steps to make in each estimator call.")
 
 flags.DEFINE_integer(
@@ -146,12 +153,16 @@ flags.DEFINE_bool(
     "A number of warnings are expected for a normal SQuAD evaluation.")
 
 flags.DEFINE_bool(
-    "version_2_with_negative", False,
+    "version_2_with_negative", True,
     "If true, the SQuAD examples contain some that do not have an answer.")
 
 flags.DEFINE_float(
     "null_score_diff_threshold", 0.0,
     "If null_score - best_non_null is greater than the threshold predict null.")
+
+flags.DEFINE_string(
+    "device_map", '2',
+    "GPU device visible")
 
 
 class SquadExample(object):
@@ -315,6 +326,9 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
 
     for (example_index, example) in enumerate(examples):
         query_tokens = tokenizer.tokenize(example.question_text)
+
+        if example_index % 5000 == 0:
+            tf.logging.info("Writing example %d of %d" % (example_index, len(examples)))
 
         if len(query_tokens) > max_query_length:
             query_tokens = query_tokens[0:max_query_length]
@@ -1187,17 +1201,19 @@ def main(_):
     if FLAGS.do_train:
         # We write to a temporary file to avoid storing very large constant tensors
         # in memory.
+        tf_record_filename = os.path.join(FLAGS.output_dir, "train.tf_record")
         train_writer = FeatureWriter(
-            filename=os.path.join(FLAGS.output_dir, "train.tf_record"),
+            filename=tf_record_filename,
             is_training=True)
-        convert_examples_to_features(
-            examples=train_examples,
-            tokenizer=tokenizer,
-            max_seq_length=FLAGS.max_seq_length,
-            doc_stride=FLAGS.doc_stride,
-            max_query_length=FLAGS.max_query_length,
-            is_training=True,
-            output_fn=train_writer.process_feature)
+        if not os.path.exists(tf_record_filename):
+            convert_examples_to_features(
+                examples=train_examples,
+                tokenizer=tokenizer,
+                max_seq_length=FLAGS.max_seq_length,
+                doc_stride=FLAGS.doc_stride,
+                max_query_length=FLAGS.max_query_length,
+                is_training=True,
+                output_fn=train_writer.process_feature)
         train_writer.close()
 
         tf.logging.info("***** Running training *****")
@@ -1218,23 +1234,24 @@ def main(_):
         eval_examples = read_squad_examples(
             input_file=FLAGS.predict_file, is_training=False)
 
+        tf_record_filename = os.path.join(FLAGS.output_dir, "eval.tf_record")
         eval_writer = FeatureWriter(
-            filename=os.path.join(FLAGS.output_dir, "eval.tf_record"),
+            filename=tf_record_filename,
             is_training=False)
         eval_features = []
 
         def append_feature(feature):
             eval_features.append(feature)
             eval_writer.process_feature(feature)
-
-        convert_examples_to_features(
-            examples=eval_examples,
-            tokenizer=tokenizer,
-            max_seq_length=FLAGS.max_seq_length,
-            doc_stride=FLAGS.doc_stride,
-            max_query_length=FLAGS.max_query_length,
-            is_training=False,
-            output_fn=append_feature)
+        if not os.path.exists(tf_record_filename):
+            convert_examples_to_features(
+                examples=eval_examples,
+                tokenizer=tokenizer,
+                max_seq_length=FLAGS.max_seq_length,
+                doc_stride=FLAGS.doc_stride,
+                max_query_length=FLAGS.max_query_length,
+                is_training=False,
+                output_fn=append_feature)
         eval_writer.close()
 
         tf.logging.info("***** Running predictions *****")
@@ -1277,7 +1294,6 @@ def main(_):
 
 
 if __name__ == "__main__":
-    flags.mark_flag_as_required("vocab_file")
-    flags.mark_flag_as_required("bert_config_file")
-    flags.mark_flag_as_required("output_dir")
+    print("Using GPU: %s" % FLAGS.device_map)
+    os.environ['CUDA_VISIBLE_DEVICES'] = FLAGS.device_map
     tf.app.run()

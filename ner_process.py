@@ -36,6 +36,21 @@ def read_csv():
 
     test_df = pd.read_csv('./data/Test_Data.csv')
     test_df['text'] = test_df['title'].fillna('') + '。' + test_df['text'].fillna('')
+    additional_chars = set()
+    for t in list(test_df.text) + list(train_df.text):
+        additional_chars.update(re.findall(u'[^\u4e00-\u9fa5a-zA-Z0-9\*]', t))
+
+    extra_chars = set("!#$%&\()*+,-./:;<=>?@[\\]^_`{|}~！#￥%&？《》{}“”，：‘’。（）·、；【】")
+    additional_chars = additional_chars.difference(extra_chars)
+
+    def remove_additional_chars(input):
+        for x in additional_chars:
+            input = input.replace(x, "")
+        return input
+
+    train_df["text"] = train_df["text"].apply(remove_additional_chars)
+    test_df["text"] = test_df["text"].apply(remove_additional_chars)
+
     return train_df, test_df
 
 
@@ -56,8 +71,9 @@ def get_sentences(text, max_length=128):
         if len(sent + tmp[i] + tmp[i + 1]) > max_length - 2 and len(tmp[i]) <= 150:
             sentences.append(sent)
             sent = ''
-        if tmp[i] != '' and len(tmp[i]) <= 150:
+        if tmp[i] != '':
             sent += (tmp[i] + tmp[i + 1])
+
         i += 2
     if sent != '':
         sentences.append(sent)
@@ -67,20 +83,6 @@ def get_sentences(text, max_length=128):
 
 def gen_bio():
     train_df, test_df = read_csv()
-    additional_chars = set()
-    for t in list(test_df.text) + list(train_df.text):
-        additional_chars.update(re.findall(u'[^\u4e00-\u9fa5a-zA-Z0-9\*]', t))
-
-    extra_chars = set("!#$%&\()*+,-./:;<=>?@[\\]^_`{|}~！#￥%&？《》{}“”，：‘’。（）·、；【】")
-    additional_chars = additional_chars.difference(extra_chars)
-
-    def remove_additional_chars(input):
-        for x in additional_chars:
-            input = input.replace(x, "")
-        return input
-
-    train_df["text"] = train_df["text"].apply(remove_additional_chars)
-    test_df["text"] = test_df["text"].apply(remove_additional_chars)
 
     # gen train
     print("generate train...")
@@ -348,11 +350,13 @@ def clean(line):
             line[i] = re.sub('\?\?+', '', line[i])
             line[i] = re.sub('\{IMG:.?.?.?\}', '', line[i])
             line[i] = re.sub('\t|\n', '', line[i])
+            line[i] = re.sub('\<.*?\>', '', line[i])
+
     return line
 
 
 if __name__ == "__main__":
-    # pre_process()
-    # gen_bio()
-    gen_csv(mode='test')
+    pre_process()
+    gen_bio()
+    # gen_csv(mode='test')
     pass
