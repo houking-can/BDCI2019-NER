@@ -1,4 +1,3 @@
-
 # coding=utf-8
 # Copyright 2018 The Google AI Language Team Authors and The HuggingFace Inc. team.
 # Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
@@ -476,6 +475,7 @@ def _check_is_max_context(doc_spans, cur_span_index, position):
 RawResult = collections.namedtuple("RawResult",
                                    ["unique_id", "start_logits", "end_logits"])
 
+
 def write_predictions(all_examples, all_features, all_results, n_best_size,
                       max_answer_length, do_lower_case, output_prediction_file,
                       output_nbest_file, output_null_log_odds_file, verbose_logging,
@@ -608,12 +608,12 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
                         text="",
                         start_logit=null_start_logit,
                         end_logit=null_end_logit))
-                
+
             # In very rare edge cases we could only have single null prediction.
             # So we just create a nonce prediction in this case to avoid failure.
-            if len(nbest)==1:
+            if len(nbest) == 1:
                 nbest.insert(0,
-                    _NbestPrediction(text="empty", start_logit=0.0, end_logit=0.0))
+                             _NbestPrediction(text="empty", start_logit=0.0, end_logit=0.0))
 
         # In very rare edge cases we could have no valid predictions. So we
         # just create a nonce prediction in this case to avoid failure.
@@ -658,30 +658,30 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
         all_nbest_json[example.qas_id] = nbest_json
 
     with open(output_prediction_file, "w") as writer:
-        writer.write(json.dumps(all_predictions, indent=4) + "\n")
+        writer.write(json.dumps(all_predictions, indent=4, ensure_ascii=False) + "\n")
 
     with open(output_nbest_file, "w") as writer:
-        writer.write(json.dumps(all_nbest_json, indent=4) + "\n")
+        writer.write(json.dumps(all_nbest_json, indent=4, ensure_ascii=False) + "\n")
 
     if version_2_with_negative:
         with open(output_null_log_odds_file, "w") as writer:
-            writer.write(json.dumps(scores_diff_json, indent=4) + "\n")
+            writer.write(json.dumps(scores_diff_json, indent=4, ensure_ascii=False) + "\n")
 
     return all_predictions
 
 
 # For XLNet (and XLM which uses the same head)
 RawResultExtended = collections.namedtuple("RawResultExtended",
-    ["unique_id", "start_top_log_probs", "start_top_index",
-     "end_top_log_probs", "end_top_index", "cls_logits"])
+                                           ["unique_id", "start_top_log_probs", "start_top_index",
+                                            "end_top_log_probs", "end_top_index", "cls_logits"])
 
 
 def write_predictions_extended(all_examples, all_features, all_results, n_best_size,
-                                max_answer_length, output_prediction_file,
-                                output_nbest_file,
-                                output_null_log_odds_file, orig_data_file,
-                                start_n_top, end_n_top, version_2_with_negative,
-                                tokenizer, verbose_logging):
+                               max_answer_length, output_prediction_file,
+                               output_nbest_file,
+                               output_null_log_odds_file, orig_data_file,
+                               start_n_top, end_n_top, version_2_with_negative,
+                               tokenizer, verbose_logging):
     """ XLNet write prediction logic (more complex than Bert's).
         Write final predictions to the json file and log-odds of null if needed.
 
@@ -690,7 +690,7 @@ def write_predictions_extended(all_examples, all_features, all_results, n_best_s
     _PrelimPrediction = collections.namedtuple(  # pylint: disable=invalid-name
         "PrelimPrediction",
         ["feature_index", "start_index", "end_index",
-        "start_log_prob", "end_log_prob"])
+         "start_log_prob", "end_log_prob"])
 
     _NbestPrediction = collections.namedtuple(  # pylint: disable=invalid-name
         "NbestPrediction", ["text", "start_log_prob", "end_log_prob"])
@@ -812,7 +812,7 @@ def write_predictions_extended(all_examples, all_features, all_results, n_best_s
         if not nbest:
             nbest.append(
                 _NbestPrediction(text="", start_log_prob=-1e6,
-                end_log_prob=-1e6))
+                                 end_log_prob=-1e6))
 
         total_scores = []
         best_non_null_entry = None

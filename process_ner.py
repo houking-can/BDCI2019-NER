@@ -5,29 +5,41 @@ from tqdm import tqdm
 import pandas as pd
 import random
 
-
-predict_dictionary = open('./data/dict/dict_oracle.txt').read().split('\n')
-predict_dictionary = [each.strip() for each in predict_dictionary]
-predict_dictionary = set([each for each in predict_dictionary if each != ''])
+oracle_dict = open('./data/dict/dict_oracle.txt').read().split('\n')
+oracle_dict = [each.strip() for each in oracle_dict]
+oracle_dict = set([each for each in oracle_dict if each != ''])
 
 remove = set(open('./data/dict/remove.txt').read().split('\n'))
 if '' in remove: remove.remove('')
 
-none = set(open('./data/dict/dict_label_none.txt').read().split('\n'))
-none = [each.strip() for each in none]
-none = set([each for each in none if each != ''])
-none = none - predict_dictionary
+none_dict = set(open('./data/dict/dict_label_none.txt').read().split('\n'))
+none_dict = [each.strip() for each in none_dict]
+none_dict = set([each for each in none_dict if each != ''])
+none_dict = none_dict - oracle_dict - remove
+# res = codecs.open('./data/dict/dict_label_none.txt', 'w')
+# aaa=sorted(list(none_dict), key=lambda k: (k, len(k)))
+# res.write('\n'.join(aaa))
+# res.close()
+
+test_dict = open('./data/dict/test_dict_0.txt').read().split('\n')
+test_dict = [each.strip() for each in test_dict]
+test_dict = set([each for each in test_dict if each != ''])
 
 train_dict = open('./data/dict/train_dict_2.txt').read().split('\n')
 train_dict = [each.strip() for each in train_dict]
 train_dict = set([each for each in train_dict if each != ''])
-train_dict = train_dict - none - predict_dictionary
+train_dict = train_dict - none_dict - oracle_dict - test_dict - remove
+# res = codecs.open('./data/dict/train_dict_2.txt', 'w')
+# aaa = sorted(list(train_dict), key=lambda k: (k, len(k)))
+# res.write('\n'.join(aaa))
+# res.close()
 
-bio_dictionary = list(predict_dictionary | train_dict | none)
-# bio_dictionary = list(set(predict_dictionary))
-bio_dictionary = sorted(bio_dictionary, key=lambda e: len(e), reverse=True)
+bio_dict = [(each, 'oracle') for each in oracle_dict if each != '']
+bio_dict = bio_dict + [(each, 'none') for each in none_dict if each != '']
+bio_dict = bio_dict + [(each, 'test') for each in test_dict if each != '']
+# bio_dict = bio_dict + [(each, 'train') for each in train_dict if each != '']
 
-assert ('' not in bio_dictionary)
+bio_dict.sort(key=lambda e: len(e[0]), reverse=True)
 
 
 def read_csv():
@@ -91,7 +103,7 @@ def gen_bio():
             sentences = get_sentences(row.text)
             up.write('Ж{0}Ж {1}\n'.format(str(row.id), 'O'))
             for i, sent in enumerate(sentences):
-                for entity in bio_dictionary:
+                for entity in bio_dict:
                     sent = sent.replace(entity, 'Ё' + (len(entity) - 1) * 'Ж')
                 for c1, c2 in zip(sent, sentences[i]):
                     if c1 == 'Ё':
@@ -113,7 +125,7 @@ def gen_bio():
             for i, sent in enumerate(sentences):
                 if len(sent) < 2:
                     continue
-                for entity in bio_dictionary:
+                for entity in bio_dict:
                     sent = sent.replace(entity, 'Ё' + (len(entity) - 1) * 'Ж')
 
                 for c1, c2 in zip(sent, sentences[i]):
@@ -185,6 +197,6 @@ def clean(line):
 
 
 if __name__ == "__main__":
-    pre_process()
-    gen_bio()
-
+    pass
+    # pre_process()
+    # gen_bio()

@@ -3,6 +3,18 @@ from collections import Counter
 
 import codecs
 
+oracle_dict = open('./data/dict/dict_oracle.txt').read().split('\n')
+oracle_dict = [each.strip() for each in oracle_dict]
+oracle_dict = set([each for each in oracle_dict if each != ''])
+
+remove = set(open('./data/dict/remove.txt').read().split('\n'))
+if '' in remove: remove.remove('')
+
+none = set(open('./data/dict/dict_label_none.txt').read().split('\n'))
+none = [each.strip() for each in none]
+none = set([each for each in none if each != ''])
+none = none - oracle_dict
+
 # remove = set(open('./data/dict/remove.txt').read().split('\n'))
 # if '' in remove: remove.remove('')
 #
@@ -50,26 +62,28 @@ import codecs
 # except:
 #     pass
 
-a = open('./res/test_completion.csv', encoding='utf-8').read().split('\n')
-b = open('./res/best.csv', encoding='utf-8').read().split('\n')
-with open('./res/extra.csv', 'w', encoding='utf-8') as f:
-    f.write('id,unknownEntities\n')
-    for i in range(1, len(a) - 1):
-        a_entities = ''
-        b_entities = ''
-        if ',' in a[i]:
-            a_id, a_entities = a[i].split(',')
-        else:
-            a_id = a[i]
-        if ',' in b[i]:
-            b_id, b_entities = b[i].split(',')
-        else:
-            b_id = b[i]
-        assert (a_id == b_id)
-        a_entities = a_entities.split(';')
-        b_entities = b_entities.split(';')
-        entities = set(a_entities) & set(b_entities)
-        f.write('%s,%s\n' % (a_id, ';'.join(list(entities))))
+# a = open('./res/best-tf-only.csv', encoding='utf-8').read().split('\n')
+# b = open('./res/post_results.csv', encoding='utf-8').read().split('\n')
+# with open('./res/combine.csv', 'w', encoding='utf-8') as f:
+#     f.write('id,unknownEntities\n')
+#     for i in range(1, len(a) - 1):
+#         a_entities = ''
+#         b_entities = ''
+#         if ',' in a[i]:
+#             a_id, a_entities = a[i].split(',')
+#         else:
+#             a_id = a[i]
+#         if ',' in b[i]:
+#             b_id, b_entities = b[i].split(',')
+#         else:
+#             b_id = b[i]
+#         assert (a_id == b_id)
+#         a_entities = a_entities.split(';')
+#         b_entities = b_entities.split(';')
+#         entities = set(a_entities) | set(b_entities)
+#         if '' in entities:
+#             entities.remove('')
+#         f.write('%s,%s\n' % (a_id, ';'.join(list(entities))))
 
 # def judge_pure_english(keyword):
 #     return all(ord(c) < 128 for c in keyword)
@@ -161,3 +175,38 @@ with open('./res/extra.csv', 'w', encoding='utf-8') as f:
 #             break
 # except:
 #     print(line.split(',')[0])
+
+
+# b = codecs.open('./data/Train_Data.csv').read()
+# a = codecs.open('/home/yhj/competitions/BDCI/res/entities.txt').read().split('\n')
+# # a=a.split(' ')
+# # a = [each.strip('\n') for each in a]
+# # print(len(a))
+# cnt = 0
+# tmp = []
+# for each in a:
+#     # if each+'资' in b:
+#     if each in b:
+#         tmp.append(each)
+#         # print(each)
+#         cnt += 1
+# print(cnt)
+# c = codecs.open('test_dict_0.txt','w')
+# c.write('\n'.join(tmp))
+# c.close()
+
+import csv
+import codecs
+
+with open('./data/old/Train_Data_Hand.csv', 'r', encoding='utf-8') as myFile:
+    lines = list(csv.reader(myFile))
+    res = codecs.open('none.csv', 'w')
+    res1 = codecs.open('nice.csv','w')
+    for line in lines[1:]:
+        if line[3] == '':
+            res.write(','.join(line) + '\n')
+            continue
+        else:
+            res1.write(','.join(line) + '\n')
+    res.close()
+    res1.close()

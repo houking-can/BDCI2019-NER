@@ -5,9 +5,9 @@ import os
 from tqdm import tqdm
 from collections import Counter
 
-predict_dictionary = open('./data/dict/dict_oracle.txt').read().split('\n')
-predict_dictionary = [each.strip() for each in predict_dictionary]
-predict_dictionary = set([each for each in predict_dictionary if each != ''])
+oracle_dict = open('./data/dict/dict_oracle.txt').read().split('\n')
+oracle_dict = [each.strip() for each in oracle_dict]
+oracle_dict = set([each for each in oracle_dict if each != ''])
 
 remove = set(open('./data/dict/remove.txt').read().split('\n'))
 if '' in remove: remove.remove('')
@@ -128,12 +128,18 @@ def filter_word(w):
     if w in remove:
         return ''
 
+    if w in oracle_dict:
+        return ''
+
+    if judge_pure_english(w) and len(w) == 2:
+        return ''
+
     return w
 
 
-def gen_csv(mode='test'):
-    predicts = codecs.open('./ner_output/%s_predictions.txt' % mode).read().split('\n\n')
-    save_name = './res/ner_%s.csv' % mode
+def gen_csv():
+    predicts = codecs.open('./ner_output/test_predictions.txt').read().split('\n\n')
+    save_name = './res/ner_results.csv'
     if os.path.exists(save_name):
         os.remove(save_name)
     res = codecs.open(save_name, 'w')
@@ -174,6 +180,7 @@ def gen_csv(mode='test'):
     # unknown_entities = select_candidates(unknown_entities)
     res.write('{0},{1}\n'.format(id, ';'.join(list(unknown_entities))))
     res.close()
+    post_process(save_name)
 
 
 # def select_candidates(unknown_entities):
@@ -196,18 +203,19 @@ def judge_pure_english(keyword):
     return all(ord(c) < 128 for c in keyword)
 
 
-def post_process(mode='test'):
+def post_process(filename):
     print('Post process...')
-    results = open('./res/ner_%s.csv' % mode).read().split('\n')
+    results = open(filename).read().split('\n')
     # results = open('./res/best.csv').read().split('\n')
     if results[-1] == '':
         results = results[:-1]
-    # res = codecs.open('./res/ner_post_%s.csv' % mode, 'w')
-    res = codecs.open('./res/best.csv', 'w')
+    save_path = './res/post_results.csv'
+    res = codecs.open(save_path, 'w')
+    # res = codecs.open('./res/best.csv', 'w')
 
     res.write('id,unknownEntities\n')
 
-    with open('./data/T%s_Data.csv' % mode[1:], 'r', encoding='utf-8') as myFile:
+    with open('./data/Test_Data.csv', 'r', encoding='utf-8') as myFile:
         lines = list(csv.reader(myFile))
         if lines[-1] == '':
             lines = lines[:-1]
@@ -217,6 +225,7 @@ def post_process(mode='test'):
             entity = completion(candidates, lines[i])
             res.write('{0},{1}\n'.format(id, ';'.join(entity)))
     res.close()
+    remove_entity('./res/post_results.csv')
 
 
 def completion(candidates, context):
@@ -248,13 +257,13 @@ def completion(candidates, context):
                         else:
                             tmp.append(each)
                             tmp.append(new)
-                    else:
-                        if ex > 1:
-                            if len(each) <= 3 and len(new) == 4:
-                                tmp.append(new)
-                                # print(each, new)
-
-                            flag = False
+                    # else:
+                    #     if ex > 1:
+                    #         if len(each) <= 3 and len(new) == 4:
+                    #             tmp.append(new)
+                    #             # print(each, new)
+                    #
+                    #         flag = False
                 except:
                     pass
 
@@ -295,12 +304,12 @@ def completion(candidates, context):
     return res
 
 
-def remove_entity(mode='test'):
+def remove_entity(filename):
     print('Removing entities...')
-    results = open('./res/ner_%s.csv' % mode).read().split('\n')
+    results = open(filename).read().split('\n')
     if results[-1] == '':
         results = results[:-1]
-    res = codecs.open('./res/ner_post_%s.csv' % mode, 'w')
+    res = codecs.open(filename, 'w')
     res.write('id,unknownEntities\n')
     for line in results[1:]:
         if ',' in line:
@@ -308,14 +317,17 @@ def remove_entity(mode='test'):
             entities = entities.split(';')
             tmp = []
             for each in entities:
-                if each in predict_dictionary or each in remove:
+                if each in remove:
+                    continue
+                if judge_pure_english(each) and len(each) == 2:
+                    print(each)
                     continue
                 tmp.append(each)
             res.write('%s,%s\n' % (id, ';'.join(tmp)))
         else:
             res.write('%s\n' % line)
 
-    lines = open('./res/ner_post_%s.csv' % mode, encoding='utf-8').read().split('\n')
+    lines = open(filename, encoding='utf-8').read().split('\n')
     tmp = []
     for i in range(1, len(lines)):
         entities = ''
@@ -329,16 +341,18 @@ def remove_entity(mode='test'):
     # tmp = list(set(tmp))
     tmp.sort(key=lambda k: (k, len(k)))
     C = list(Counter(tmp).items())
-    C.sort(key=lambda k: k[1], reverse=True)
+    C.sort(key=lambda k: (k[1], k, len(k)), reverse=True)
     xx = []
     for each in C:
         if each[0] != '':
-            xx.append(each[0] + ' ' + str(each[1]))
+            # xx.append(each[0] + ' ' + str(each[1]))
+            xx.append(each[0])
+
     with open('./res/entities.txt', 'w', encoding='utf-8') as f:
         f.write('\n'.join(xx))
 
 
 if __name__ == "__main__":
-    # gen_csv(mode='test')
-    # post_process(mode='test')
-    remove_entity()
+    # gen_csv()
+    # post_process('./res/extra.csv')
+    remove_entity('./res/combine.csv')
