@@ -9,7 +9,7 @@ oracle_dict = open('./data/dict/dict_oracle.txt').read().split('\n')
 oracle_dict = [each.strip() for each in oracle_dict]
 oracle_dict = set([each for each in oracle_dict if each != ''])
 
-remove = set(open('./data/dict/remove.txt').read().split('\n'))
+remove = set(open('./data/train_dict.txt').read().split('\n'))
 if '' in remove: remove.remove('')
 
 
@@ -125,10 +125,7 @@ def filter_word(w):
     if w.endswith('.'):
         return ''
 
-    if w in remove:
-        return ''
-
-    if w in oracle_dict:
+    if w in remove or w in oracle_dict:
         return ''
 
     if judge_pure_english(w) and len(w) == 2:
@@ -137,9 +134,8 @@ def filter_word(w):
     return w
 
 
-def gen_csv():
-    predicts = codecs.open('./ner_output/test_predictions.txt').read().split('\n\n')
-    save_name = './res/ner_results.csv'
+def gen_csv(filename, save_name='./res/predict_results.csv'):
+    predicts = codecs.open(filename).read().split('\n\n')
     if os.path.exists(save_name):
         os.remove(save_name)
     res = codecs.open(save_name, 'w')
@@ -160,7 +156,9 @@ def gen_csv():
                 id = tmp_id[0]
                 unknown_entities = set()
                 continue
-            word, tag = each.split()
+            label = each.split()
+            word = label[0]
+            tag = label[-1]
             if tag == 'B-ORG':
                 if entity == '':
                     entity = word
@@ -180,7 +178,8 @@ def gen_csv():
     # unknown_entities = select_candidates(unknown_entities)
     res.write('{0},{1}\n'.format(id, ';'.join(list(unknown_entities))))
     res.close()
-    post_process(save_name)
+
+    return save_name
 
 
 # def select_candidates(unknown_entities):
@@ -225,7 +224,7 @@ def post_process(filename):
             entity = completion(candidates, lines[i])
             res.write('{0},{1}\n'.format(id, ';'.join(entity)))
     res.close()
-    remove_entity('./res/post_results.csv')
+    return save_path
 
 
 def completion(candidates, context):
@@ -250,20 +249,21 @@ def completion(candidates, context):
                 try:
                     xx = re.findall('(%s.*?)(理财|集团|控股|平台|银行|公司|资本|投资|生态|策略|控股集团)' % each, new)
                     if xx:
-                        flag = False
                         new = xx[0][0] + xx[0][1]
-                        if context.count(each) == context.count(new):
-                            tmp.append(new)
+                        new = check_quotation(new)
+                        new = check_brackets(new)
+                        if "是不是" in new or "黑平台" in new:
+                            flag = True
+                        elif '等' in xx[0][0][len(each):]:
+                            flag = True
                         else:
-                            tmp.append(each)
-                            tmp.append(new)
-                    # else:
-                    #     if ex > 1:
-                    #         if len(each) <= 3 and len(new) == 4:
-                    #             tmp.append(new)
-                    #             # print(each, new)
-                    #
-                    #         flag = False
+                            if context.count(each) == context.count(new):
+                                tmp.append(new)
+                            else:
+                                tmp.append(each)
+                                tmp.append(new)
+                            flag = False
+
                 except:
                     pass
 
@@ -273,11 +273,8 @@ def completion(candidates, context):
             tmp.append(each)
 
     tmp = list(set(tmp))
-
     xx = []
     for w in tmp:
-        if w in remove:
-            continue
         cnt = context.count(w)
         # if judge_pure_english(w) and cnt == 1:
         #     continue
@@ -317,7 +314,7 @@ def remove_entity(filename):
             entities = entities.split(';')
             tmp = []
             for each in entities:
-                if each in remove:
+                if each in remove or each in oracle_dict:
                     continue
                 if judge_pure_english(each) and len(each) == 2:
                     print(each)
@@ -332,9 +329,9 @@ def remove_entity(filename):
     for i in range(1, len(lines)):
         entities = ''
         if ',' in lines[i]:
-            id, entities = lines[i].split(',')
+            _, entities = lines[i].split(',')
         else:
-            id = lines[i]
+            _ = lines[i]
         entities = entities.split(';')
         tmp.extend(entities)
 
@@ -345,14 +342,16 @@ def remove_entity(filename):
     xx = []
     for each in C:
         if each[0] != '':
-            # xx.append(each[0] + ' ' + str(each[1]))
-            xx.append(each[0])
+            xx.append(each[0] + ' ' + str(each[1]))
+            # xx.append(each[0])
 
     with open('./res/entities.txt', 'w', encoding='utf-8') as f:
         f.write('\n'.join(xx))
 
 
 if __name__ == "__main__":
-    # gen_csv()
-    # post_process('./res/extra.csv')
-    remove_entity('./res/combine.csv')
+    results_path = './res/predict_results.csv'
+    gen_csv('./output/label_test.txt', results_path)
+
+    post_path = post_process(results_path)
+    remove_entity(post_path)

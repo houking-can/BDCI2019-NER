@@ -303,7 +303,7 @@ def main():
     parser.add_argument("--model_name_or_path", default="/home/yhj/competitions/BDCI/bert/", type=str,
                         help="Path to pre-trained model or shortcut name selected in the list: " + ", ".join(
                             ALL_MODELS))
-    parser.add_argument("--output_dir", default="./ner_output", type=str,
+    parser.add_argument("--output_dir", default="./output", type=str,
                         help="The output directory where the model predictions and checkpoints will be written.")
 
     ## Other parameters

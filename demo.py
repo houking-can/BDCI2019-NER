@@ -3,31 +3,31 @@ from collections import Counter
 
 import codecs
 
-oracle_dict = open('./data/dict/dict_oracle.txt').read().split('\n')
-oracle_dict = [each.strip() for each in oracle_dict]
-oracle_dict = set([each for each in oracle_dict if each != ''])
-
-remove = set(open('./data/dict/remove.txt').read().split('\n'))
-if '' in remove: remove.remove('')
-
-none = set(open('./data/dict/dict_label_none.txt').read().split('\n'))
-none = [each.strip() for each in none]
-none = set([each for each in none if each != ''])
-none = none - oracle_dict
-
+# oracle_dict = open('./data/dict/dict_oracle.txt').read().split('\n')
+# oracle_dict = [each.strip() for each in oracle_dict]
+# oracle_dict = set([each for each in oracle_dict if each != ''])
+#
 # remove = set(open('./data/dict/remove.txt').read().split('\n'))
 # if '' in remove: remove.remove('')
 #
-# results = open('./res/best.csv').read().split('\n')
-# if results[-1] == '':
-#     results = results[:-1]
-# res = codecs.open('./res/best.csv', 'w')
+# none = set(open('./data/dict/dict_label_none.txt').read().split('\n'))
+# none = [each.strip() for each in none]
+# none = set([each for each in none if each != ''])
+# none = none - oracle_dict
+
+# remove = set(open('./data/dict/remove.txt').read().split('\n'))
+# if '' in remove: remove.remove('')
+
+# results = open('./res/ner_results.csv').read().split('\n')
+# results = [each for each in results if each != '']
+# res = codecs.open('./res/tmp.csv', 'w')
+# b = codecs.open('./data/Train_Data.csv').read()
 # res.write('id,unknownEntities\n')
 # for line in results[1:]:
 #     if ',' in line:
 #         id, entities = line.split(',')
 #         entities = entities.split(';')
-#         tmp = [each for each in entities if each not in remove]
+#         tmp = [each for each in entities if each not in b]
 #         res.write('%s,%s\n' % (id, ';'.join(tmp)))
 #     else:
 #         res.write('%s\n' % line)
@@ -62,9 +62,9 @@ none = none - oracle_dict
 # except:
 #     pass
 
-# a = open('./res/best-tf-only.csv', encoding='utf-8').read().split('\n')
-# b = open('./res/post_results.csv', encoding='utf-8').read().split('\n')
-# with open('./res/combine.csv', 'w', encoding='utf-8') as f:
+# a = open('./res/youbank.csv', encoding='utf-8').read().split('\n')
+# b = open('./res/best.csv', encoding='utf-8').read().split('\n')
+# with open('./res/extra.csv', 'w', encoding='utf-8') as f:
 #     f.write('id,unknownEntities\n')
 #     for i in range(1, len(a) - 1):
 #         a_entities = ''
@@ -80,7 +80,7 @@ none = none - oracle_dict
 #         assert (a_id == b_id)
 #         a_entities = a_entities.split(';')
 #         b_entities = b_entities.split(';')
-#         entities = set(a_entities) | set(b_entities)
+#         entities = set(b_entities) - set(a_entities)
 #         if '' in entities:
 #             entities.remove('')
 #         f.write('%s,%s\n' % (a_id, ';'.join(list(entities))))
@@ -142,17 +142,24 @@ none = none - oracle_dict
 #     f.write('\n'.join(sorted(dict - oracle)))
 
 
-# oracle = set(open('./data/dict/train_dict_1.txt', encoding='utf-8').read().split('\n'))
-# a = set(open('./data/dict/train_dict_2.txt', encoding='utf-8').read().split('\n'))
-# oracle = oracle & a
-# with open('./data/dict/train_dict_1.txt', 'w', encoding='utf-8') as f:
-#     oracle = [each.strip() for each in oracle if each != '']
-#     f.write('\n'.join(sorted(oracle, key=lambda x: (len(x), x))))
+oracle = set(open('./data/select_dict.txt', encoding='utf-8').read().split('\n'))
+with open('./data/select_dict.txt', 'w', encoding='utf-8') as f:
+    oracle = [each.strip() for each in oracle if each != '']
+    f.write('\n'.join(sorted(oracle, key=lambda x: (x, len(x)))))
 
-# dict = set(open('./data/dict/dict.txt', encoding='utf-8').read().split('\n'))
-# # with open('./data/dict/dict_1.txt', 'w', encoding='utf-8') as f:
-# #     oracle = [each.strip() for each in oracle if each != '']
-# #     f.write('\n'.join(sorted(oracle)))
+def judge_pure_english(keyword):
+    return all(ord(c) < 128 for c in keyword)
+
+
+# dict = set(open('./data/dict/train_dict_2.txt', encoding='utf-8').read().split('\n'))
+# with open('./data/dict/train_dict_3.txt', 'w', encoding='utf-8') as f:
+#     oracle = [each.strip() for each in dict if each != '']
+#     tmp=[]
+#     for each in oracle:
+#         if judge_pure_english(each):
+#             continue
+#         tmp.append(each)
+#     f.write('\n'.join(sorted(tmp)))
 #
 # with open('./data/dict/dict_ex.txt', 'w', encoding='utf-8') as f:
 #     f.write('\n'.join(sorted(dict - oracle)))
@@ -178,7 +185,7 @@ none = none - oracle_dict
 
 
 # b = codecs.open('./data/Train_Data.csv').read()
-# a = codecs.open('/home/yhj/competitions/BDCI/res/entities.txt').read().split('\n')
+# a = codecs.open('/home/yhj/competitions/BDCI/tmp.txt').read().split('\n')
 # # a=a.split(' ')
 # # a = [each.strip('\n') for each in a]
 # # print(len(a))
@@ -190,23 +197,60 @@ none = none - oracle_dict
 #         tmp.append(each)
 #         # print(each)
 #         cnt += 1
+#     else:
+#         print(each)
 # print(cnt)
-# c = codecs.open('test_dict_0.txt','w')
+# c = codecs.open('tmp.txt','w')
 # c.write('\n'.join(tmp))
 # c.close()
 
 import csv
 import codecs
 
-with open('./data/old/Train_Data_Hand.csv', 'r', encoding='utf-8') as myFile:
-    lines = list(csv.reader(myFile))
-    res = codecs.open('none.csv', 'w')
-    res1 = codecs.open('nice.csv','w')
-    for line in lines[1:]:
-        if line[3] == '':
-            res.write(','.join(line) + '\n')
-            continue
-        else:
-            res1.write(','.join(line) + '\n')
-    res.close()
-    res1.close()
+filename = './data/old/Train_Data_Hand.csv'
+#
+# tmp = ['id,title,text,unknownEntities']
+# lines = open(filename, 'r', encoding='utf-8').read().split('\n')
+# cnt = 0
+# for i, line in enumerate(lines[1:]):
+#     line = line.split(',')
+#     if line == '': continue
+#     e = line[-1].split(';')
+#     if len(e) > 3:
+#         cnt += 1
+#         print(line[0], line[-1])
+# print(cnt)
+# if len(line)==4:
+#     tmp.append(','.join(line))
+# else:
+#     x = ''.join(line[2:-1])
+#     x =x.replace(',','，')
+#     try:
+#         tmp.append(','.join([line[0],line[1],x,line[-1]]))
+#     except:
+#         print(line)
+
+# with open(filename,'w',encoding='utf-8') as f:
+#     f.write('\n'.join(tmp))
+
+
+# print(line[0],line[-2])
+# for line in lines[1:]:
+#     a.add(line[0])
+# print(len(a))
+# b_lines = open('./data/old/none.txt', 'r', encoding='utf-8').read().split('\n')
+# xx =set()
+# for each in b_lines:
+#     each=each.split(',')
+#     xx.add(each[0])
+# print(xx&a)
+# res = codecs.open('none.csv', 'w')
+# res1 = codecs.open('nice.csv','w')
+# for line in lines[1:]:
+#     if line[3] == '':
+#         res.write(','.join(line) + '\n')
+#         continue
+#     else:
+#         res1.write(','.join(line) + '\n')
+# res.close()
+# res1.close()
