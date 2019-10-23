@@ -29,6 +29,7 @@ def filter_word(w):
 
     if 'CEO' in w:
         w = w.replace('CEO', '')
+    w = w.strip('-')
 
     if judge_pure_english(w) and len(w) == 2:
         return ''
@@ -172,31 +173,93 @@ def check_punctuations(w, context):
     return ''
 
 
-def complete_entity(entity, context):
-    for word in extra_words:
-        if entity.endswith(word):
-            return entity
+def verify_entity(candidates, contex):
+    """
+    检查后缀是否明显错误
+    :param candidates:
+    :param contex:
+    :return:
+    """
+    # 引号的处理
+    res = []
+    for entity in candidates:
+        if re.findall('’|‘|\'|\"|“|”', entity):
+            tmp = re.sub('’|‘|\'|\"|“|”', '', entity)
+            if tmp in candidates:
+                res.append(tmp if contex.count(tmp) >= contex.count(entity) else entity)
+                # print(tmp, entity)
+                continue
+        res.append(entity)
+
+    candidates = res
+
+    # 处理非法后缀[会,]
+    res = []
+    for entity in candidates:
+        if entity.endswith('会'):
+            if not entity.endswith('基金会'):
+                if contex.count(entity[:-1]) > contex.count(entity) and len(entity) > 3:
+                    res.append(entity[:-1])
+                    continue
+        res.append(entity)
+
+    candidates = res
+
+    # 处理数字后缀
+    res = []
+    
+
+    return res
+
+
+def complement_entity(entity, context):
+    """
+    根据文本内容补全
+    :param entity:
+    :param context:
+    :return:
+    """
+    cnt = context.count(entity)
+    if cnt == 0: return []
 
     for word in extra_words:
-        # if len(word) == 1:
-        #     if context.find(entity) == context.find(entity + word):
-        #         print(entity,entity+word)
-        #         return entity + word
-        #     continue
+        new_entity = entity + word
+        new_cnt = context.count(new_entity)
+        if new_cnt > 0:
+            if new_cnt == cnt:
+                # print(1, entity, entity + word)
+                return [new_entity]
+            if new_entity.lower().endswith('app'):
+                # print(2, new_entity[:-3])
+                return [new_entity[:-3]]
+            # print(2, entity, entity + word)
+            return [entity]
+
+    for word in extra_words:
         for i in range(1, len(word)):
-            if entity.endswith(word[:i]) and context.find(entity + word[i:]) >= 0:
+            new_cnt = context.count(entity + word[i:])
+            if entity.endswith(word[:i]) and new_cnt > 0:
                 new_entity = entity + word[i:]
-                if new_entity.lower().endswith('app'):
-                    new_entity = new_entity[:-3]
                 if context.index(entity) == context.index(new_entity):
                     if len(new_entity) == 3 and len(entity) == 2:
-                        return ''
-                    return new_entity
+                        return []
 
-    return entity
+                if new_cnt != cnt and new_entity.lower().endswith('app'):
+                    print(2, entity, new_entity[:-3], new_entity)
+                    return [new_entity[:-3]]
+
+                # print(3, entity, new_entity)
+                return [new_entity]
+
+    return [entity]
 
 
 def post_process(filename):
+    """
+    后处理部分
+    :param filename:
+    :return:
+    """
     print('Post process...')
     results = open(filename).read().split('\n')
     # results = open('./res/best.csv').read().split('\n')
@@ -218,32 +281,44 @@ def post_process(filename):
                 entity = []
             else:
                 candidates = candidates.split(';')
-                entity = completion(candidates, lines[i])
+                entity = complement_verify(candidates, lines[i])
             res.write('{0},{1}\n'.format(id, ';'.join(entity)))
     res.close()
     return save_path
 
 
-def completion(candidates, context):
-    context = context[1] + '。' + context[2]
+def complement_verify(candidates, context):
+    """
+    对候选实体集合补全，删除非法后缀
+    :param candidates:
+    :param context:
+    :return:
+    """
+    if len(context[1]) > 40 and context[2].startswith(context[1][:-9]):
+        context = context[2]
+    else:
+        context = context[1] + '。' + context[2]
+
     new_candidates = []
     for entity in candidates:
-        new_entity = complete_entity(entity, context)
-        if new_entity != '':
-            new_candidates.append(new_entity)
-            if new_entity != entity and context.count(entity) != context.count(new_entity):
-                new_candidates.append(entity)
+        new_entity = complement_entity(entity, context)
+        if new_entity != []:
+            new_candidates.extend(new_entity)
 
     new_candidates = list(set(new_candidates))
     new_candidates = [check_punctuations(w, context) for w in new_candidates]
+    new_candidates = list(set(new_candidates))
 
-    cnt_candidates = [(each, context.count(each)) for each in new_candidates if each != '']
+    verify_candidates = verify_entity(new_candidates, context)
+
+    cnt_candidates = [(each, context.count(each)) for each in verify_candidates if each != '']
     cnt_candidates.sort(key=lambda k: (k[0], len(k[0])))
 
     de_duplicate = []
     for i in range(len(cnt_candidates) - 1):
-        if cnt_candidates[i + 1][1] == cnt_candidates[i][1] and \
-                cnt_candidates[i + 1][0].startswith(cnt_candidates[i][0]):
+        if cnt_candidates[i + 1][0].startswith(cnt_candidates[i][0]) \
+                and (cnt_candidates[i][1] - cnt_candidates[i + 1][1]) < cnt_candidates[i + 1][1]:
+            # print(cnt_candidates[i][0],cnt_candidates[i + 1][0])
             continue
         de_duplicate.append((cnt_candidates[i]))
     if len(cnt_candidates) > 0:
@@ -261,7 +336,6 @@ def completion(candidates, context):
 
 
 def remove_entity(filename):
-    train_text = codecs.open('./data/old/none.csv').read()
     print('Removing entities...')
     results = open(filename).read().split('\n')
     if results[-1] == '':
@@ -273,13 +347,12 @@ def remove_entity(filename):
             id, entities = line.split(',')
             entities = entities.split(';')
             candidates = []
-            for each in entities:
-                if each in remove or each in oracle_dict:
-                    # if each in train_text:
+            for entity in entities:
+                if entity in remove or entity in oracle_dict:
                     continue
-                if judge_pure_english(each) and len(each) <= 2:
+                if judge_pure_english(entity) and len(entity) <= 2:
                     continue
-                candidates.append(each)
+                candidates.append(entity)
             res.write('%s,%s\n' % (id, ';'.join(candidates)))
         else:
             res.write('%s\n' % line)
@@ -311,7 +384,7 @@ def remove_entity(filename):
 
 if __name__ == "__main__":
     results_path = './res/predict_results.csv'
-    gen_csv('./label_test.txt', results_path)
+    # gen_csv('./label_test.txt', results_path)
     # gen_csv('./output/test_predictions.txt',results_path)
     post_path = post_process(results_path)
     remove_entity(post_path)

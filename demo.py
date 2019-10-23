@@ -88,7 +88,7 @@ with open('./res/extra.csv', 'w', encoding='utf-8') as f:
         assert (a_id == b_id)
         a_entities = a_entities.split(';')
         b_entities = b_entities.split(';')
-        entities = set(b_entities) - set(a_entities)
+        entities = set(a_entities) - set(b_entities)
         if '' in entities:
             entities.remove('')
         f.write('%s,%s\n' % (a_id, ';'.join(list(entities))))
