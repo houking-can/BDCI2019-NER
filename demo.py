@@ -18,21 +18,29 @@ import codecs
 # remove = set(open('./data/dict/remove.txt').read().split('\n'))
 # if '' in remove: remove.remove('')
 
-# results = open('./res/ner_results.csv').read().split('\n')
-# results = [each for each in results if each != '']
-# res = codecs.open('./res/tmp.csv', 'w')
-# b = codecs.open('./data/Train_Data.csv').read()
+# results = open('./res/predict_results.csv').read().split('\n')
+# results = list(set([each for each in results if each != '']))
+# train_dict = set(codecs.open('./data/dict/train_dict_3.txt').read().split('\n'))
+# # b = codecs.open('./data/Train_Data.csv').read()
+# tmp=set(codecs.open('tmp.txt').read().split('\n'))
+# res = codecs.open('tmp.txt','w')
+
+
 # res.write('id,unknownEntities\n')
+#
 # for line in results[1:]:
 #     if ',' in line:
 #         id, entities = line.split(',')
 #         entities = entities.split(';')
-#         tmp = [each for each in entities if each not in b]
-#         res.write('%s,%s\n' % (id, ';'.join(tmp)))
-#     else:
-#         res.write('%s\n' % line)
-
-
+#         for each in entities:
+#             if each in train_dict:
+#                 tmp.add(each)
+#         # tmp = [each for each in entities if each not in b]
+#         # res.write('%s,%s\n' % (id, ';'.join(tmp)))
+#     # else:
+#     #     res.write('%s\n' % line)
+# res.write('\n'.join(list(tmp)))
+# res.close()
 # a = open('./res/test_completion.csv', encoding='utf-8').read().split('\n')
 # tmp = []
 # for i in range(1, len(a)):
@@ -62,28 +70,28 @@ import codecs
 # except:
 #     pass
 
-# a = open('./res/youbank.csv', encoding='utf-8').read().split('\n')
-# b = open('./res/best.csv', encoding='utf-8').read().split('\n')
-# with open('./res/extra.csv', 'w', encoding='utf-8') as f:
-#     f.write('id,unknownEntities\n')
-#     for i in range(1, len(a) - 1):
-#         a_entities = ''
-#         b_entities = ''
-#         if ',' in a[i]:
-#             a_id, a_entities = a[i].split(',')
-#         else:
-#             a_id = a[i]
-#         if ',' in b[i]:
-#             b_id, b_entities = b[i].split(',')
-#         else:
-#             b_id = b[i]
-#         assert (a_id == b_id)
-#         a_entities = a_entities.split(';')
-#         b_entities = b_entities.split(';')
-#         entities = set(b_entities) - set(a_entities)
-#         if '' in entities:
-#             entities.remove('')
-#         f.write('%s,%s\n' % (a_id, ';'.join(list(entities))))
+a = open('./res/post_results.csv', encoding='utf-8').read().split('\n')
+b = open('./res/best.csv', encoding='utf-8').read().split('\n')
+with open('./res/extra.csv', 'w', encoding='utf-8') as f:
+    f.write('id,unknownEntities\n')
+    for i in range(1, len(a) - 1):
+        a_entities = ''
+        b_entities = ''
+        if ',' in a[i]:
+            a_id, a_entities = a[i].split(',')
+        else:
+            a_id = a[i]
+        if ',' in b[i]:
+            b_id, b_entities = b[i].split(',')
+        else:
+            b_id = b[i]
+        assert (a_id == b_id)
+        a_entities = a_entities.split(';')
+        b_entities = b_entities.split(';')
+        entities = set(b_entities) - set(a_entities)
+        if '' in entities:
+            entities.remove('')
+        f.write('%s,%s\n' % (a_id, ';'.join(list(entities))))
 
 # def judge_pure_english(keyword):
 #     return all(ord(c) < 128 for c in keyword)
@@ -116,10 +124,11 @@ import codecs
 
 # a = set(open(r'C:\Users\Houking\Desktop\label\a.csv', encoding='utf-8').read().split('\n'))
 
-
-# with open(r'C:\Users\Houking\Desktop\label\b.txt', 'w', encoding='utf-8') as f:
-#     oracle = [each.strip() for each in oracle if each != '']
-#     f.write('\n'.join(sorted(oracle,key=lambda x:(len(x),x))))
+# oracle = codecs.open('/home/yhj/competitions/BDCI/data/dict/dict_oracle.txt').read().split('\n')
+# oracle = list(set([each.strip() for each in oracle if each != '']))
+# oracle.sort(key=lambda x:(x,len(x)))
+# with open('/home/yhj/competitions/BDCI/data/dict/dict_oracle.txt', 'w', encoding='utf-8') as f:
+#     f.write('\n'.join(oracle))
 
 # dict_1 = set(open(r'C:\Users\Houking\Desktop\label\train_clean_1.txt', encoding='utf-8').read().split('\n'))
 # dict_2 = set(open(r'C:\Users\Houking\Desktop\label\train_clean_2.txt', encoding='utf-8').read().split('\n'))
@@ -141,11 +150,22 @@ import codecs
 # with open('./data/dict/dict_ex.txt', 'w', encoding='utf-8') as f:
 #     f.write('\n'.join(sorted(dict - oracle)))
 
+# a = set(open('./data/dict/train_dict_3.txt', encoding='utf-8').read().split('\n'))
+# a = set([each.strip() for each in a if each != ''])
+# # oracle = set(open('./data/select_dict.txt', encoding='utf-8').read().split('\n'))
+# # oracle = set([each.strip() for each in oracle if each != ''])
+# # oracle = list(oracle - a)
+# c = codecs.open('./data/dict/test_dict_0.txt').read().split('\n')
+# cnt=0
+# for each in c:
+#     if each in a:
+#         print(each)
+#         cnt+=1
+# print(cnt)
 
-oracle = set(open('./data/select_dict.txt', encoding='utf-8').read().split('\n'))
-with open('./data/select_dict.txt', 'w', encoding='utf-8') as f:
-    oracle = [each.strip() for each in oracle if each != '']
-    f.write('\n'.join(sorted(oracle, key=lambda x: (x, len(x)))))
+# with open('./data/select_dict.txt', 'w', encoding='utf-8') as f:
+#
+#     f.write('\n'.join(sorted(oracle, key=lambda x: (x, len(x)))))
 
 def judge_pure_english(keyword):
     return all(ord(c) < 128 for c in keyword)
@@ -185,7 +205,7 @@ def judge_pure_english(keyword):
 
 
 # b = codecs.open('./data/Train_Data.csv').read()
-# a = codecs.open('/home/yhj/competitions/BDCI/tmp.txt').read().split('\n')
+# a = set(codecs.open('/home/yhj/competitions/BDCI/data/dict/remove.txt').read().split('\n'))
 # # a=a.split(' ')
 # # a = [each.strip('\n') for each in a]
 # # print(len(a))

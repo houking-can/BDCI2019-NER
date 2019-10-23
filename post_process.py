@@ -12,92 +12,10 @@ oracle_dict = set([each for each in oracle_dict if each != ''])
 remove = set(open('./data/train_dict.txt').read().split('\n'))
 if '' in remove: remove.remove('')
 
-
-def check_brackets(w):
-    w = w.rstrip('（')
-    w = w.rstrip('(')
-    w = w.lstrip(')')
-    w = w.lstrip('）')
-    cnt_chinese = 0
-    cnt_english = 0
-    for c in w:
-        if c == '（':
-            cnt_chinese += 1
-        elif c == '）':
-            cnt_chinese -= 1
-    for c in w:
-        if c == '(':
-            cnt_english += 1
-        elif c == ')':
-            cnt_english -= 1
-
-    if cnt_chinese == 0 and cnt_english == 0:
-        if w.startswith('（') and w.endswith('）'):
-            return w[1:-1]
-        if w.startswith('(') and w.endswith(')'):
-            return w[1:-1]
-        return w
-
-    if cnt_chinese > 0:
-        if not w.startswith('（'):
-            return w + '）'
-        return w[1:]
-    if cnt_chinese < 0:
-        if not w.endswith('）'):
-            return '（' + w
-        return w[:-1]
-    if cnt_english > 0:
-        if not w.startswith('('):
-            return w + ')'
-        return w[1:]
-    if cnt_english < 0:
-        if not w.endswith(')'):
-            return '(' + w
-        return w[:-1]
-
-
-def check_quotation(w):
-    w = w.lstrip('”')
-    w = w.lstrip('’')
-    w = w.rstrip('“')
-    w = w.rstrip('‘')
-
-    cnt_double = 0
-    cnt_single = 0
-    for c in w:
-        if c == '“':
-            cnt_double += 1
-        elif c == '”':
-            cnt_double -= 1
-    for c in w:
-        if c == '‘':
-            cnt_single += 1
-        elif c == '’':
-            cnt_single -= 1
-
-    if cnt_double == 0 and cnt_single == 0:
-        if w.startswith('“') and w.endswith('”'):
-            return w[1:-1]
-        if w.startswith('‘') and w.endswith('’'):
-            return w[1:-1]
-        return w
-
-    if cnt_double > 0:
-        if not w.startswith('“'):
-            return w + '”'
-        return w[1:]
-    if cnt_double < 0:
-        if not w.endswith('”'):
-            return '“' + w
-        return w[:-1]
-    if cnt_single > 0:
-        if not w.startswith('‘'):
-            return w + '’'
-        return w[1:]
-    if cnt_single < 0:
-        if not w.endswith('’'):
-            return '‘' + w
-        return w[:-1]
+extra_words = codecs.open('./data/extra_words.txt').read().split('\n')
+extra_words = [each.strip() for each in extra_words if each != '']
+extra_words = list(set(extra_words))
+extra_words.sort(key=lambda k: len(k), reverse=True)
 
 
 def filter_word(w):
@@ -115,8 +33,6 @@ def filter_word(w):
     if judge_pure_english(w) and len(w) == 2:
         return ''
 
-    w = check_brackets(w)
-    w = check_quotation(w)
     if w.isnumeric():
         return ''
     if len(w) == 1:
@@ -128,7 +44,7 @@ def filter_word(w):
     if w in remove or w in oracle_dict:
         return ''
 
-    if judge_pure_english(w) and len(w) == 2:
+    if judge_pure_english(w) and len(w) <= 2:
         return ''
 
     return w
@@ -182,24 +98,102 @@ def gen_csv(filename, save_name='./res/predict_results.csv'):
     return save_name
 
 
-# def select_candidates(unknown_entities):
-#     unknown_entities = list(unknown_entities)
-#     tmp = sorted(unknown_entities, key=lambda e: len(e))
-#     if tmp != []:
-#         unknown_entities = []
-#         for i in range(len(tmp) - 1):
-#             flag = True
-#             for j in range(i + 1, len(tmp)):
-#                 if tmp[i] in tmp[j]:
-#                     flag = False
-#                     break
-#             if flag:
-#                 unknown_entities.append(tmp[i])
-#         unknown_entities.append(tmp[-1])
-#     return unknown_entities
-
 def judge_pure_english(keyword):
     return all(ord(c) < 128 for c in keyword)
+
+
+def find_all(sub, s):
+    index_list = []
+    index = s.find(sub)
+    while index != -1:
+        index_list.append(index)
+        index = s.find(sub, index + 1)
+
+    if len(index_list) > 0:
+        return index_list
+    else:
+        return -1
+
+
+def check_punctuations(w, context):
+    w = w.strip('（')
+    w = w.strip('(')
+    w = w.strip(')')
+    w = w.strip('）')
+
+    w = w.strip('”')
+    w = w.strip('’')
+    w = w.strip('“')
+    w = w.strip('‘')
+
+    if all(p not in w for p in ['(', '（', '\'', '"', '‘', '“', ')', '）', '”', '’']):
+        return w
+
+    index = context.find(w)
+    if index + len(w) < len(context) and context[index + len(w)] in [')', '）', '"', '”', '\'', '’']:
+        w = w + context[index + len(w)]
+    if index > 0 and context[index - 1] in ['(', '（', '\'', '"', '‘', '“']:
+        w = context[index - 1] + w
+
+    if w[0] in ['(', '（'] and w[-1] in [')', '）']:
+        return w[1:-1]
+    if w[0] in ['"', '“', '\'', '‘'] and w[-1] in ['"', '”', '’', '\'']:
+        return w[1:-1]
+
+    cnt_double = 0
+    cnt_single = 0
+    for c in w:
+        if c == '“':
+            cnt_double += 1
+        elif c == '”':
+            cnt_double -= 1
+    for c in w:
+        if c == '‘':
+            cnt_single += 1
+        elif c == '’':
+            cnt_single -= 1
+
+    cnt_chinese = 0
+    cnt_english = 0
+    for c in w:
+        if c == '（':
+            cnt_chinese += 1
+        elif c == '）':
+            cnt_chinese -= 1
+    for c in w:
+        if c == '(':
+            cnt_english += 1
+        elif c == ')':
+            cnt_english -= 1
+
+    if cnt_chinese == 0 and cnt_english == 0 and cnt_double == 0 and cnt_single == 0:
+        return w
+
+    return ''
+
+
+def complete_entity(entity, context):
+    for word in extra_words:
+        if entity.endswith(word):
+            return entity
+
+    for word in extra_words:
+        # if len(word) == 1:
+        #     if context.find(entity) == context.find(entity + word):
+        #         print(entity,entity+word)
+        #         return entity + word
+        #     continue
+        for i in range(1, len(word)):
+            if entity.endswith(word[:i]) and context.find(entity + word[i:]) >= 0:
+                new_entity = entity + word[i:]
+                if new_entity.lower().endswith('app'):
+                    new_entity = new_entity[:-3]
+                if context.index(entity) == context.index(new_entity):
+                    if len(new_entity) == 3 and len(entity) == 2:
+                        return ''
+                    return new_entity
+
+    return entity
 
 
 def post_process(filename):
@@ -220,107 +214,73 @@ def post_process(filename):
             lines = lines[:-1]
         for i in range(1, len(lines)):
             id, candidates = results[i].split(',')
-            candidates = candidates.split(';')
-            entity = completion(candidates, lines[i])
+            if candidates == '':
+                entity = []
+            else:
+                candidates = candidates.split(';')
+                entity = completion(candidates, lines[i])
             res.write('{0},{1}\n'.format(id, ';'.join(entity)))
     res.close()
     return save_path
 
 
 def completion(candidates, context):
-    remove_char = {']', '：', '~', '！', '%', '[', '《', '】', ';', ':', '》', '？', '>', '/', '#', '。', '；', '&', '=',
-                   '，',
-                   '【', '@', '、', '|', ',', '”', '?'}
-
     context = context[1] + '。' + context[2]
-    tmp = []
-    for each in candidates:
-        index = context.find(each)
-        ex = 1
-        if context.count(each) > 1:
-            for i in range(1, len(context) - index - len(each)):
-                if context.count(each) != context.count(context[index:index + i + len(each)]):
-                    ex = i
-                    break
+    new_candidates = []
+    for entity in candidates:
+        new_entity = complete_entity(entity, context)
+        if new_entity != '':
+            new_candidates.append(new_entity)
+            if new_entity != entity and context.count(entity) != context.count(new_entity):
+                new_candidates.append(entity)
 
-            new = context[index:index + ex - 1 + len(each)]
-            flag = True
-            if len(new) < 22 and len(re.findall("\\" + "|\\".join(remove_char), new)) == 0:
-                try:
-                    xx = re.findall('(%s.*?)(理财|集团|控股|平台|银行|公司|资本|投资|生态|策略|控股集团)' % each, new)
-                    if xx:
-                        new = xx[0][0] + xx[0][1]
-                        new = check_quotation(new)
-                        new = check_brackets(new)
-                        if "是不是" in new or "黑平台" in new:
-                            flag = True
-                        elif '等' in xx[0][0][len(each):]:
-                            flag = True
-                        else:
-                            if context.count(each) == context.count(new):
-                                tmp.append(new)
-                            else:
-                                tmp.append(each)
-                                tmp.append(new)
-                            flag = False
+    new_candidates = list(set(new_candidates))
+    new_candidates = [check_punctuations(w, context) for w in new_candidates]
 
-                except:
-                    pass
+    cnt_candidates = [(each, context.count(each)) for each in new_candidates if each != '']
+    cnt_candidates.sort(key=lambda k: (k[0], len(k[0])))
 
-            if flag:
-                tmp.append(each)
-        else:
-            tmp.append(each)
-
-    tmp = list(set(tmp))
-    xx = []
-    for w in tmp:
-        cnt = context.count(w)
-        # if judge_pure_english(w) and cnt == 1:
-        #     continue
-        xx.append((cnt, len(context) - context.find(w), w))
-    xx.sort(key=lambda k: (k[0], k[1]), reverse=True)
-
-    res = []
-    for i in range(len(xx) - 1):
-        if xx[i + 1][0] == xx[i][0] and xx[i + 1][2].startswith(xx[i][2]):
+    de_duplicate = []
+    for i in range(len(cnt_candidates) - 1):
+        if cnt_candidates[i + 1][1] == cnt_candidates[i][1] and \
+                cnt_candidates[i + 1][0].startswith(cnt_candidates[i][0]):
             continue
-        res.append(xx[i])
-    if len(xx) > 0:
-        res.append(xx[-1])
+        de_duplicate.append((cnt_candidates[i]))
+    if len(cnt_candidates) > 0:
+        de_duplicate.append(cnt_candidates[-1])
 
-    res = [each[2] for each in res]
-    # if len(res) <= 2:
-    #     return [each[2] for each in res]
-    # else:
-    #     tmp = [each[2] for each in res[:2]]
-    #     for i in range(2, len(res)):
-    #         if res[i][0] >= 2 and (len(context) - res[i][1]) < len(context) // 2:
-    #             tmp.append(res[i][2])
-    #     return tmp
-    return res
+    # sort candidates
+    rank_candidates = []
+    for entity, cnt in de_duplicate:
+        rank_candidates.append((cnt, len(context) - context.find(entity), entity))
+    rank_candidates.sort(key=lambda k: (k[0], k[1]), reverse=True)
+
+    rank_candidates = [each[2] for each in rank_candidates]
+
+    return rank_candidates
 
 
 def remove_entity(filename):
+    train_text = codecs.open('./data/old/none.csv').read()
     print('Removing entities...')
     results = open(filename).read().split('\n')
     if results[-1] == '':
         results = results[:-1]
     res = codecs.open(filename, 'w')
     res.write('id,unknownEntities\n')
-    for line in results[1:]:
+    for line in tqdm(results[1:]):
         if ',' in line:
             id, entities = line.split(',')
             entities = entities.split(';')
-            tmp = []
+            candidates = []
             for each in entities:
                 if each in remove or each in oracle_dict:
+                    # if each in train_text:
                     continue
-                if judge_pure_english(each) and len(each) == 2:
-                    print(each)
+                if judge_pure_english(each) and len(each) <= 2:
                     continue
-                tmp.append(each)
-            res.write('%s,%s\n' % (id, ';'.join(tmp)))
+                candidates.append(each)
+            res.write('%s,%s\n' % (id, ';'.join(candidates)))
         else:
             res.write('%s\n' % line)
 
@@ -351,7 +311,7 @@ def remove_entity(filename):
 
 if __name__ == "__main__":
     results_path = './res/predict_results.csv'
-    gen_csv('./output/label_test.txt', results_path)
-
+    gen_csv('./label_test.txt', results_path)
+    # gen_csv('./output/test_predictions.txt',results_path)
     post_path = post_process(results_path)
     remove_entity(post_path)

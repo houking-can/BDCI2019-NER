@@ -32,7 +32,7 @@ test_dict = [each.strip() for each in test_dict]
 test_dict = set([each for each in test_dict if each != ''])
 test_dict = test_dict - oracle_dict - none_dict - remove
 
-train_dict = open('./data/dict/train_dict_2.txt').read().split('\n')
+train_dict = open('./data/dict/train_dict_3.txt').read().split('\n')
 train_dict = [each.strip() for each in train_dict]
 train_dict = set([each for each in train_dict if each != ''])
 train_dict = train_dict - none_dict - oracle_dict - test_dict - remove
@@ -41,7 +41,7 @@ train_dict = train_dict - none_dict - oracle_dict - test_dict - remove
 # res.write('\n'.join(aaa))
 # res.close()
 
-oracle_bio = list(oracle_dict | none_dict)
+oracle_bio = list(oracle_dict | none_dict | train_dict)
 oracle_bio.sort(key=lambda e: len(e), reverse=True)
 
 test_bio = list(test_dict)
