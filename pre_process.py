@@ -5,57 +5,26 @@ from tqdm import tqdm
 import pandas as pd
 import random
 
-oracle_dict = open('./data/dict/dict_oracle.txt').read().split('\n')
-oracle_dict = [each.strip() for each in oracle_dict]
-oracle_dict = set([each for each in oracle_dict if each != ''])
+dict_oracle = open('./data/dict/dict_oracle.txt').read().split('\n')
+dict_oracle = [each.strip() for each in dict_oracle]
+dict_oracle = set([each for each in dict_oracle if each != ''])
 
-remove = set(open('./data/dict/remove.txt').read().split('\n'))
-if '' in remove: remove.remove('')
-remove = remove - oracle_dict
-# res = codecs.open('./data/dict/remove.txt', 'w')
-# aaa=sorted(list(remove), key=lambda k: (k, len(k)))
-# res.write('\n'.join(aaa))
-# res.close()
-# print(oracle_dict & remove)
+dict_known = open('./data/dict/dict_known.txt').read().split('\n')
+dict_known = [each.strip() for each in dict_known]
+dict_known = set([each for each in dict_known if each != ''])
 
-none_dict = set(open('./data/dict/dict_none.txt').read().split('\n'))
-none_dict = [each.strip() for each in none_dict]
-none_dict = set([each for each in none_dict if each != ''])
-none_dict = none_dict - oracle_dict
-# res = codecs.open('./data/dict/dict_none.txt', 'w')
-# aaa=sorted(list(none_dict), key=lambda k: (k, len(k)))
-# res.write('\n'.join(aaa))
-# res.close()
+bio_none = set(open('./data/dict/bio_none.txt').read().split('\n'))
+bio_none = [each.strip() for each in bio_none]
+bio_none = set([each for each in bio_none if each != ''])
+bio_none = bio_none - dict_oracle
 
-test_dict = open('./data/dict/test_dict_0.txt').read().split('\n')
-test_dict = [each.strip() for each in test_dict]
-test_dict = set([each for each in test_dict if each != ''])
-test_dict = test_dict - oracle_dict - none_dict - remove
+bio_train = open('./data/dict/bio_train.txt').read().split('\n')
+bio_train = [each.strip() for each in bio_train]
+bio_train = set([each for each in bio_train if each != ''])
+bio_train = bio_train - dict_oracle
 
-train_dict = open('./data/dict/train_dict_3.txt').read().split('\n')
-train_dict = [each.strip() for each in train_dict]
-train_dict = set([each for each in train_dict if each != ''])
-train_dict = train_dict - none_dict - oracle_dict - test_dict - remove
-# res = codecs.open('./data/dict/train_dict_2.txt', 'w')
-# aaa = sorted(list(train_dict), key=lambda k: (k, len(k)))
-# res.write('\n'.join(aaa))
-# res.close()
-
-oracle_bio = list(oracle_dict | none_dict | train_dict)
-oracle_bio.sort(key=lambda e: len(e), reverse=True)
-
-test_bio = list(test_dict)
-test_bio.sort(key=lambda e: len(e), reverse=True)
-none_bio = list(none_dict)
-none_bio.sort(key=lambda e: len(e), reverse=True)
-
-
-# bio_dict = [(each, 'oracle') for each in oracle_dict if each != '']
-# bio_dict = bio_dict + [(each, 'none') for each in none_dict if each != '']
-# bio_dict = bio_dict + [(each, 'test') for each in test_dict if each != '']
-# bio_dict = bio_dict + [(each, 'train') for each in train_dict if each != '']
-
-# bio_dict.sort(key=lambda e: len(e[0]), reverse=True)
+label_bio = list(dict_oracle | bio_none | bio_train | dict_known)
+label_bio.sort(key=lambda e: len(e), reverse=True)
 
 
 def read_csv():
@@ -124,27 +93,34 @@ def find_all(sub, s):
     else:
         return None
 
+def judge_alpha(c):
+    unicode_id = ord(c)
+    if (unicode_id<=122 and unicode_id>=97) or (unicode_id<=90 and unicode_id>=65):
+        return True
+    return False
 
 def label_sent(sent):
     bio_list = ['O' for _ in range(len(sent))]
-    for entity in oracle_bio:
+    for entity in label_bio:
         index = find_all(entity, sent)
         if index:
             if judge_pure_english(entity):
                 for start in index:
-                    if start > 0 and sent[start - 1].isalpha():
-                        continue
-                    elif start + len(entity) < len(sent) and sent[start + len(entity)].isalpha():
-                        continue
-                    bio_list[start] = 'B-ORG'
-                    for k in range(start + 1, start + len(entity)):
-                        bio_list[k] = 'I-ORG'
+                    if all(ch == 'O' for ch in bio_list[start:start + len(entity)]):
+                        if start > 0 and judge_alpha(sent[start - 1]):
+                            continue
+                        elif start + len(entity) < len(sent) and judge_alpha(sent[start + len(entity)]):
+                            continue
+                        bio_list[start] = 'B-ORG'
+                        for k in range(start + 1, start + len(entity)):
+                            bio_list[k] = 'I-ORG'
 
             else:
                 for start in index:
-                    bio_list[start] = 'B-ORG'
-                    for k in range(start + 1, start + len(entity)):
-                        bio_list[k] = 'I-ORG'
+                    if all(ch == 'O' for ch in bio_list[start:start + len(entity)]):
+                        bio_list[start] = 'B-ORG'
+                        for k in range(start + 1, start + len(entity)):
+                            bio_list[k] = 'I-ORG'
 
     # for entity in test_bio:
     #     index = find_all(entity, sent)
@@ -193,8 +169,10 @@ def gen_bio():
     # gen train
     print("generate train...")
     rows = [each for each in train_df.iloc[:].itertuples()]
+    train_rows = rows[:-100]
+    random.shuffle(train_rows)
     with codecs.open('./data/train.txt', 'w') as up:
-        for row in tqdm(rows):
+        for row in tqdm(train_rows):
             sentences = get_sentences(row.text)
             up.write('Ж{0}Ж {1}\n'.format(str(row.id), 'O'))
             for i, sent in enumerate(sentences):
@@ -205,8 +183,9 @@ def gen_bio():
     # gen dev
     print("generate dev...")
     with codecs.open('./data/dev.txt', 'w') as up:
-        rows = random.sample([each for each in train_df.iloc[:].itertuples()], 100)
-        for row in tqdm(rows):
+        # rows = random.sample([each for each in train_df.iloc[:].itertuples()], 100)
+        test_rows = rows[-100:]
+        for row in tqdm(test_rows):
             sentences = get_sentences(row.text)
             up.write('Ж{0}Ж {1}\n'.format(str(row.id), 'O'))
             for i, sent in enumerate(sentences):
@@ -229,7 +208,7 @@ def gen_bio():
 
 def pre_process():
     print('process train.csv...')
-    with open('./data/old/Train_Data_Hand.csv', 'r', encoding='utf-8') as myFile:
+    with open('./data/oracle/Train_Data_Hand.csv', 'r', encoding='utf-8') as myFile:
         lines = list(csv.reader(myFile))
         data = []
         for line in lines[1:]:
@@ -243,7 +222,7 @@ def pre_process():
             f_csv.writerows(data)
 
     print('process test.csv...')
-    with open('./data/old/Test_Data.csv', 'r', encoding='utf-8') as myFile:
+    with open('./data/oracle/Test_Data.csv', 'r', encoding='utf-8') as myFile:
         lines = list(csv.reader(myFile))
         data = []
         for line in lines[1:]:
@@ -256,10 +235,23 @@ def pre_process():
             f_csv.writerows(data)
 
 
+def judge_code(s):
+    cnt = 0
+    for each in s:
+        if ord(each) < 128:
+            cnt += 1
+    if cnt / len(s) > 0.9:
+        return True
+
+    return False
+
+
 def clean(line):
+    http_pattern = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+    www_pattern = 'www\.(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
     for i in range(1, 3):
         if line[i] != '':
-            line[i] = line[i].replace(",", "，")
+            line[i] = line[i].replace('▋', '，')
             line[i] = line[i].replace("\xa0", "")
             line[i] = line[i].replace("\b", "")
             line[i] = line[i].replace('"', "")
@@ -267,13 +259,59 @@ def clean(line):
             line[i] = line[i].strip()
             line[i] = re.sub('\?\?+', '', line[i])
             line[i] = re.sub('\{IMG:.?.?.?\}', '', line[i])
-            line[i] = re.sub('\t|\n', '', line[i])
             line[i] = re.sub('\<.*?\>', '', line[i])
+            line[i] = re.sub('\u3000+', '，', line[i])
+            line[i] = re.sub(http_pattern, '，', line[i])
+            line[i] = re.sub(www_pattern, '，', line[i])
+            line[i] = re.sub('https://', '', line[i])
+            line[i] = re.sub('http://', '', line[i])
+            line[i] = re.sub('window.public=.*\(window,document\);', '，', line[i])
+            line[i] = re.sub('varcontentConEle=.*AD_SURVEY_Add_AdPos\(.*\);', '，', line[i])
+            line[i] = re.sub('function\(\).*\(\);', '，', line[i])
+            # start = 0
+            # cnt = 0
+            # j = 0
+            # tmp = line[i]
+            #
+            # while j < len(line[i]):
+            #     if line[i][j] == '{':
+            #         if cnt == 0:
+            #             start = j
+            #         cnt += 1
+            #         j += 1
+            #         continue
+            #     elif line[i][j] == '}':
+            #         cnt -= 1
+            #         if cnt == 0:
+            #             end = j
+            #             if judge_code(line[i][start:j]):
+            #                 k = start
+            #                 while k >= 0:
+            #                     if ord(line[i][k]) < 128:
+            #                         start -= 1
+            #                     else:
+            #                         break
+            #                     k -= 1
+            #                 k = j
+            #                 while k < len(line[i]):
+            #                     if ord(line[i][k]) < 128 and line[i][k] != '{':
+            #                         end += 1
+            #                     else:
+            #                         break
+            #                     k += 1
+            #                 tmp = tmp.replace(line[i][start + 1:end], '，')
+            #                 print(line[0])
+            #                 print(line[i][start + 1:end])
+            #                 print('\n')
+            #             j = end + 1
+            #             continue
+            #
+            #     j += 1
+            # line[i] = tmp
 
     return line
 
 
 if __name__ == "__main__":
-    # pass
     pre_process()
     gen_bio()

@@ -1,6 +1,7 @@
-ner_output/
+output/
 data/
+checkpoint/
 .idea/
 res/
-qa_output/
+best/
 
