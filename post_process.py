@@ -240,6 +240,8 @@ def judge_ends(entity):
     for word in completion_words:
         if entity.endswith(word):
             return True
+    if entity.endswith('平台'):
+        return True
     return False
 
 
@@ -267,19 +269,51 @@ def complement_entity(entity, context):
         return []
 
     # 补全实体前后的英文
-    # index = cont
+    index = context.find(entity)
+    if index < 0: return []
+    if judge_alpha(entity[0]):
+        for i in range(index - 1, -1, -1):
+            if judge_alpha(context[i]):
+                continue
+            entity = context[i + 1:index] + entity
+            break
+    if judge_alpha(entity[-1]):
+        for i in range(index + len(entity), len(context)):
+            if judge_alpha(context[i]):
+                continue
+            tmp = entity + context[index + len(entity):i]
+            if tmp.lower().endswith('app'):
+
+                if context.count(tmp) == context.count(tmp[:-3]):
+                    # print(1, entity, tmp)
+                    return [tmp]
+                # print(2, entity, tmp[:-3])
+                return [tmp[:-3]]
+            break
+
+    start = index + len(entity)
+    if start < len(context) and judge_alpha(context[start]):
+        for i in range(start, len(context)):
+            if judge_alpha(context[i]):
+                continue
+            tmp = entity + context[index + len(entity):i]
+            if len(tmp) - len(entity) <= 1:
+                break
+            if context.count(entity) == context.count(tmp):
+                # print(3, entity, tmp)
+                return [tmp]
+            elif tmp.lower().endswith('app'):
+                # print(4, entity, tmp[:-3])
+                return [tmp[:-3]]
+            break
 
     cnt = context.count(entity)
-    if cnt == 0: return []
-
     for word in completion_words:
         new_entity = entity + word
         new_cnt = context.count(new_entity)
         if new_cnt > 0:
             if new_cnt == cnt:
                 return [new_entity]
-            if new_entity.lower().endswith('app'):
-                return [new_entity[:-3]]
             return [entity]
 
     for word in completion_words:
@@ -321,7 +355,8 @@ def post_process(filename):
         lines = list(csv.reader(myFile))
         if lines[-1] == '':
             lines = lines[:-1]
-        for i in tqdm(range(1, len(lines))):
+        # for i in tqdm(range(1, len(lines))):
+        for i in range(1, len(lines)):
             id, candidates = results[i].split(',')
             if candidates == '':
                 entity = []
