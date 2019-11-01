@@ -3,35 +3,42 @@ from collections import Counter
 
 import codecs
 
-a = open('./data/dict/bio_train.txt').read().split('\n')
-a = [each.strip() for each in a]
-a = set([each for each in a if each != ''])
-
 dict_oracle = open('./data/dict/dict_oracle.txt').read().split('\n')
 dict_oracle = [each.strip() for each in dict_oracle]
 dict_oracle = set([each for each in dict_oracle if each != ''])
 
-# remove_city = open('./data/dict/remove_city.txt').read().split('\n')
-# remove_city = [each.strip() for each in remove_city]
-# remove_city = set([each for each in remove_city if each != ''])
-#
-# b = open('./data/dict/none_reserved.txt').read().split('\n')
-# b = [each.strip() for each in b]
-# b = set([each for each in b if each != ''])
-#
-# a=list(a-dict_oracle-remove_city-b)
-# a.sort(key=lambda k:(k,len(k)))
-# train_text = codecs.open('./data/Train_Data.csv').read()
-# tmp=[]
-# print(len(dict_oracle))
-# for each in dict_oracle:
-#     if each in train_text:
-#         tmp.append(each)
-    # else:
-    #     print(each)
-# print('\n')
-# print(len(a))
-#
+remove_city = open('./data/dict/remove_city.txt').read().split('\n')
+remove_city = [each.strip() for each in remove_city]
+remove_city = set([each for each in remove_city if each != ''])
+
+remove_train = open('./data/dict/remove_train.txt').read().split('\n')
+remove_train = [each.strip() for each in remove_train]
+remove_train = set([each for each in remove_train if each != ''])
+
+dict_known = open('./data/dict/dict_known.txt').read().split('\n')
+dict_known = [each.strip() for each in dict_known]
+dict_known = set([each for each in dict_known if each != ''])
+
+bio_train = open('./data/dict/bio_train.txt').read().split('\n')
+bio_train = [each.strip() for each in bio_train]
+bio_train = set([each for each in bio_train if each != ''])
+
+remove_select = set(open('./data/dict/remove_select.txt').read().split('\n'))
+if '' in remove_select: remove_select.remove('')
+
+train_text = codecs.open('./data/Train_Data.csv').read()
+
+extra = list(remove_train - dict_oracle - remove_city - dict_known)
+extra.sort(key=lambda k: (k, len(k)))
+
+tmp = []
+print(len(remove_train))
+print(len(extra))
+for each in extra:
+    # if each in train_text:
+    print(each)
+
+
 # tmp=list(a-dict_oracle)
 # print(len(tmp))
 # tmp.sort(key=lambda k:(k,len(k)))
@@ -236,4 +243,3 @@ dict_oracle = set([each for each in dict_oracle if each != ''])
 #             break
 # except:
 #     print(line.split(',')[0])
-

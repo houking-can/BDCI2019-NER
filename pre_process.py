@@ -122,25 +122,6 @@ def label_sent(sent):
                         for k in range(start + 1, start + len(entity)):
                             bio_list[k] = 'I-ORG'
 
-    # for entity in test_bio:
-    #     index = find_all(entity, sent)
-    #     if index:
-    #         if judge_pure_english(entity):
-    #             for start in index:
-    #                 if start > 0 and sent[start - 1].isalpha():
-    #                     continue
-    #                 elif start + len(entity) < len(sent) and sent[start+len(entity)].isalpha():
-    #                     continue
-    #                 bio_list[start] = 'B-TEST'
-    #                 for k in range(start + 1, start + len(entity)):
-    #                     bio_list[k] = 'I-TEST'
-    #
-    #         else:
-    #             for start in index:
-    #                 bio_list[start] = 'B-TEST'
-    #                 for k in range(start + 1, start + len(entity)):
-    #                     bio_list[k] = 'I-TEST'
-
     # for entity in none_bio:
     #     index = find_all(entity, sent)
     #     if index:
