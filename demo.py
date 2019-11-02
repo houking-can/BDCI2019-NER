@@ -28,7 +28,7 @@ if '' in remove_select: remove_select.remove('')
 
 train_text = codecs.open('./data/Train_Data.csv').read()
 
-extra = list(remove_train - dict_oracle - remove_city - dict_known)
+extra = list(remove_select - dict_oracle - remove_city - remove_train -dict_known)
 extra.sort(key=lambda k: (k, len(k)))
 
 tmp = []
@@ -243,3 +243,66 @@ for each in extra:
 #             break
 # except:
 #     print(line.split(',')[0])
+
+
+"""pre_process.py"""
+# start = 0
+# cnt = 0
+# j = 0
+# tmp = line[i]
+#
+# while j < len(line[i]):
+#     if line[i][j] == '{':
+#         if cnt == 0:
+#             start = j
+#         cnt += 1
+#         j += 1
+#         continue
+#     elif line[i][j] == '}':
+#         cnt -= 1
+#         if cnt == 0:
+#             end = j
+#             if judge_code(line[i][start:j]):
+#                 k = start
+#                 while k >= 0:
+#                     if ord(line[i][k]) < 128:
+#                         start -= 1
+#                     else:
+#                         break
+#                     k -= 1
+#                 k = j
+#                 while k < len(line[i]):
+#                     if ord(line[i][k]) < 128 and line[i][k] != '{':
+#                         end += 1
+#                     else:
+#                         break
+#                     k += 1
+#                 tmp = tmp.replace(line[i][start + 1:end], '，')
+#                 print(line[0])
+#                 print(line[i][start + 1:end])
+#                 print('\n')
+#             j = end + 1
+#             continue
+#
+#     j += 1
+# line[i] = tmp
+
+
+# for entity in none_bio:
+#     index = find_all(entity, sent)
+#     if index:
+#         if judge_pure_english(entity):
+#             for start in index:
+#                 if start > 0 and sent[start - 1].isalpha():
+#                     continue
+#                 elif start + len(entity) < len(sent) and sent[start+len(entity)].isalpha():
+#                     continue
+#                 bio_list[start] = 'B-NONE'
+#                 for k in range(start + 1, start + len(entity)):
+#                     bio_list[k] = 'I-NONE'
+#
+#         else:
+#             for start in index:
+#                 bio_list[start] = 'B-NONE'
+#                 for k in range(start + 1, start + len(entity)):
+#                     bio_list[k] = 'I-NONE'

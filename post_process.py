@@ -20,15 +20,13 @@ remove_train = set([each for each in remove_train if each != ''])
 dict_known = open('./data/dict/dict_known.txt').read().split('\n')
 dict_known = [each.strip() for each in dict_known]
 dict_known = set([each for each in dict_known if each != ''])
-dict_known.add('微信')
-dict_known.add('微博')
 
 bio_train = open('./data/dict/bio_train.txt').read().split('\n')
 bio_train = [each.strip() for each in bio_train]
 bio_train = set([each for each in bio_train if each != ''])
 
-# remove_select = set(open('./data/dict/remove_select.txt').read().split('\n'))
-# if '' in remove_select: remove_select.remove('')
+remove_select = set(open('./data/dict/remove_select.txt').read().split('\n'))
+if '' in remove_select: remove_select.remove('')
 
 completion_words = codecs.open('./data/dict/completion_words.txt').read().split('\n')
 completion_words = [each.strip() for each in completion_words if each != '']
@@ -208,7 +206,7 @@ def verify_entity(candidates, context):
 
     candidates = res
 
-    # 处理非法后缀[会,公众号]
+    # 处理非法后缀[会,公众号,有限公,]
     res = []
     for entity in candidates:
         if entity.endswith('会'):
@@ -220,6 +218,8 @@ def verify_entity(candidates, context):
             index = entity.find('公众号')
             entity = entity[:index]
             # print(1, entity, entity[:index])
+        elif entity.endswith('有限公') and entity + '司' not in context:
+            continue
         res.append(entity)
 
     candidates = [e for e in res if e != '']
@@ -252,6 +252,15 @@ def judge_alpha(c):
     return False
 
 
+def complement_candidates(candidates, context):
+    new_candidates = []
+    for entity in candidates:
+        new_entity = complement_entity(entity, context)
+        if new_entity != []:
+            new_candidates.extend(new_entity)
+    return new_candidates
+
+
 def complement_entity(entity, context):
     """
     根据文本内容补全
@@ -262,11 +271,6 @@ def complement_entity(entity, context):
     # 如果实体结尾为公司，国际，控股等直接返回
     if judge_ends(entity):
         return [entity]
-
-    if entity.endswith('有限公'):
-        if entity + '司' in context:
-            return [entity + '司']
-        return []
 
     # 补全实体前后的英文
     index = context.find(entity)
@@ -308,15 +312,19 @@ def complement_entity(entity, context):
             break
 
     cnt = context.count(entity)
+
     for word in completion_words:
         new_entity = entity + word
         new_cnt = context.count(new_entity)
         if new_cnt > 0:
             if new_cnt == cnt:
                 return [new_entity]
+            if new_cnt >= 3:
+                return [entity, new_entity]
+                # print(new_entity)
             return [entity]
 
-    for word in completion_words:
+    for word in completion_words + ['平台', '挖矿']:
         for i in range(1, len(word)):
             new_cnt = context.count(entity + word[i:])
             if entity.endswith(word[:i]) and new_cnt > 0:
@@ -334,19 +342,18 @@ def complement_entity(entity, context):
     return [entity]
 
 
-def post_process(filename):
+def post_process(results_path, complete_path):
     """
     后处理部分
     :param filename:
     :return:
     """
     print('Post process...')
-    results = open(filename).read().split('\n')
+    results = open(results_path).read().split('\n')
     # results = open('./res/best.csv').read().split('\n')
     if results[-1] == '':
         results = results[:-1]
-    save_path = './res/post_results.csv'
-    res = codecs.open(save_path, 'w')
+    res = codecs.open(complete_path, 'w')
     # res = codecs.open('./res/best.csv', 'w')
 
     res.write('id,unknownEntities\n')
@@ -368,7 +375,26 @@ def post_process(filename):
                     entity = []
             res.write('{0},{1}\n'.format(id, ';'.join(entity)))
     res.close()
-    return save_path
+
+
+def judge_illegal(entity, context):
+    one_word = [w for w in completion_words if len(w) == 1]
+    one_word += ['贷', '盘', '购', '狗']
+    if context.count(entity) == 1:
+        if not entity[-1].isdigit() and entity[-1] not in ['）', ')', '”', '’'] and not judge_alpha(entity[-1]):
+            if entity[-1] not in one_word and all(judge_alpha(c) for c in entity[:-1]):
+                return True
+    return False
+
+
+def delete_words(candidates, context):
+    new_candidates = []
+    for entity in candidates:
+        if judge_illegal(entity, context):
+            entity = entity[:-1]
+        new_candidates.append(entity)
+
+    return new_candidates
 
 
 def complement_verify(candidates, context):
@@ -383,40 +409,46 @@ def complement_verify(candidates, context):
     else:
         context = context[1] + '。' + context[2]
 
-    new_candidates = []
-    for entity in candidates:
-        new_entity = complement_entity(entity, context)
-        if new_entity != []:
-            new_candidates.extend(new_entity)
+    candidates = complement_candidates(candidates, context)
 
-    new_candidates = list(set(new_candidates))
-    new_candidates = [check_punctuations(w, context) for w in new_candidates]
-    new_candidates = list(set(new_candidates))
+    candidates = list(set(candidates))
+    candidates = [check_punctuations(w, context) for w in candidates]
+    candidates = list(set(candidates))
 
-    verify_candidates = verify_entity(new_candidates, context)
+    candidates = verify_entity(candidates, context)
+    candidates = [e for e in candidates if len(e) >= 2]
 
-    cnt_candidates = [(each, context.count(each)) for each in verify_candidates if each != '']
-    cnt_candidates.sort(key=lambda k: (k[0], len(k[0])))
+    candidates = [(each, context.count(each)) for each in candidates if each != '']
+    candidates.sort(key=lambda k: (k[0], len(k[0])))
 
     de_duplicate = []
-    for i in range(len(cnt_candidates) - 1):
-        if cnt_candidates[i + 1][0].startswith(cnt_candidates[i][0]) \
-                and (cnt_candidates[i][1] - cnt_candidates[i + 1][1]) < cnt_candidates[i + 1][1]:
+    for i in range(len(candidates) - 1):
+        if candidates[i + 1][0].startswith(candidates[i][0]) \
+                and (candidates[i][1] - candidates[i + 1][1]) < candidates[i + 1][1]:
             # print(cnt_candidates[i][0],cnt_candidates[i + 1][0])
             continue
-        de_duplicate.append((cnt_candidates[i]))
-    if len(cnt_candidates) > 0:
-        de_duplicate.append(cnt_candidates[-1])
+        de_duplicate.append((candidates[i]))
+    if len(candidates) > 0:
+        de_duplicate.append(candidates[-1])
 
     # sort candidates
     rank_candidates = []
     for entity, cnt in de_duplicate:
         rank_candidates.append((cnt, context.find(entity), entity))
-    rank_candidates.sort(key=lambda k: (k[0], k[1]))
+    # 排序规则，频率优先，位置靠前优先
+    rank_candidates.sort(key=lambda k: (1000 - k[0], k[1]))
 
-    rank_candidates = [each[2] for each in rank_candidates]
+    # 删除出现一次靠后的长度为2的实体，比如：币圈
+    res = [each[2] for each in rank_candidates[:3]]
+    if len(rank_candidates) > 3:
+        for cnt, _, entity in rank_candidates[3:]:
+            if len(entity) == 2 and cnt == 1:
+                continue
+            res.append(entity)
 
-    return rank_candidates
+    candidates = delete_words(res, context)
+
+    return candidates
 
 
 def is_known(entity):
@@ -435,23 +467,18 @@ def is_known(entity):
 
 
 def should_remove(entity, candidates):
-    # if len(entity) == 2 and not judge_pure_english(entity):
-    #     # print(entity)
-    #     tmp.add(entity)
-    #     cnt += 1
-    #     # continue
     if judge_pure_english(entity) and len(entity) <= 2:
         return True
 
     return False
 
 
-def remove_entity(filename):
+def remove_entity(post_path, res_path):
     print('Removing entities...')
-    results = open(filename).read().split('\n')
+    results = open(post_path).read().split('\n')
     if results[-1] == '':
         results = results[:-1]
-    res = codecs.open(filename, 'w')
+    res = codecs.open(res_path, 'w')
     res.write('id,unknownEntities\n')
     # train_text = codecs.open('./data/Train_Data.csv').read()
 
@@ -468,22 +495,26 @@ def remove_entity(filename):
                 if entity in remove_set:
                     continue
                 if is_known(entity):
-                    tmp.add(entity)
                     continue
 
                 if should_remove(entity, entities):
                     continue
+                if entity in remove_select:
+                    tmp.add(entity)
+                    cnt += 1
+                    continue
 
                 candidates.append(entity)
+
             res.write('%s,%s\n' % (id, ';'.join(candidates)))
         else:
             res.write('%s\n' % line)
 
-    # tmp = list(tmp)
-    # tmp.sort(key=lambda k: (k, len(k)))
-    # for each in tmp:
-    #     print(each)
-    # print(cnt)
+    tmp = list(tmp)
+    tmp.sort(key=lambda k: (k, len(k)))
+    for each in tmp:
+        print(each)
+    print(cnt)
 
 
 def count_entity(filename):
@@ -518,8 +549,10 @@ def count_entity(filename):
 
 if __name__ == "__main__":
     results_path = './res/predict_results.csv'
+    post_path = './res/post_results.csv'
+    res_path = './res/results.csv'
     # gen_csv('./output/label_test.txt', results_path)
-    post_path = post_process(results_path)
 
-    remove_entity(post_path)
-    count_entity(post_path)
+    post_process(results_path, post_path)
+    remove_entity(post_path, res_path)
+    count_entity(res_path)
