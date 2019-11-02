@@ -220,6 +220,10 @@ def verify_entity(candidates, context):
             # print(1, entity, entity[:index])
         elif entity.endswith('有限公') and entity + '司' not in context:
             continue
+        elif entity.startswith('与'):
+            entity = entity[1:]
+        elif entity.endswith('其') and context.count(entity[:-1]) >= context.count(entity):
+            entity = entity[1:]
         res.append(entity)
 
     candidates = [e for e in res if e != '']
@@ -281,6 +285,7 @@ def complement_entity(entity, context):
                 continue
             entity = context[i + 1:index] + entity
             break
+
     if judge_alpha(entity[-1]):
         for i in range(index + len(entity), len(context)):
             if judge_alpha(context[i]):
@@ -295,6 +300,7 @@ def complement_entity(entity, context):
                 return [tmp[:-3]]
             break
 
+    # 补全中文后面的英文
     start = index + len(entity)
     if start < len(context) and judge_alpha(context[start]):
         for i in range(start, len(context)):
@@ -303,12 +309,35 @@ def complement_entity(entity, context):
             tmp = entity + context[index + len(entity):i]
             if len(tmp) - len(entity) <= 1:
                 break
+
+            if tmp.lower().endswith('qq'):
+                break
             if context.count(entity) == context.count(tmp):
                 # print(3, entity, tmp)
                 return [tmp]
             elif tmp.lower().endswith('app'):
                 # print(4, entity, tmp[:-3])
                 return [tmp[:-3]]
+
+            break
+
+    # 补全中文前面的英文
+    start = index - 1
+    if start >= 0 and judge_alpha(context[start]):
+        for i in range(start, -1, -1):
+            if judge_alpha(context[i]):
+                continue
+
+            tmp = context[i + 1:index] + entity
+            if len(tmp) - len(entity) <= 1:
+                break
+
+            if context[i + 1:index].lower() in ['app', 'cn', 'ceo', 'com']:
+                break
+
+            if context.count(entity) == context.count(tmp):
+                # print(3, entity, tmp)
+                return [tmp]
             break
 
     cnt = context.count(entity)
