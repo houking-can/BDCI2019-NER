@@ -224,6 +224,12 @@ def verify_entity(candidates, context):
             entity = entity[1:]
         elif entity.endswith('其') and context.count(entity[:-1]) >= context.count(entity):
             entity = entity[1:]
+        elif entity.endswith('神话'):
+            continue
+        elif entity.startswith('辣鸡'):
+            continue
+        elif entity.startswith('山寨'):
+            continue
         res.append(entity)
 
     candidates = [e for e in res if e != '']
@@ -533,6 +539,9 @@ def remove_entity(post_path, res_path):
                     cnt += 1
                     continue
 
+                # if entity in train_text:
+                #     tmp.add(entity)
+                #     cnt += 1
                 candidates.append(entity)
 
             res.write('%s,%s\n' % (id, ';'.join(candidates)))
@@ -582,6 +591,6 @@ if __name__ == "__main__":
     res_path = './res/results.csv'
     # gen_csv('./output/label_test.txt', results_path)
 
-    post_process(results_path, post_path)
+    # post_process(results_path, post_path)
     remove_entity(post_path, res_path)
     count_entity(res_path)
