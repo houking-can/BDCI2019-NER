@@ -3,9 +3,15 @@ from collections import Counter
 
 import codecs
 
-dict_oracle = open('./data/dict/dict_oracle.txt').read().split('\n')
-dict_oracle = [each.strip() for each in dict_oracle]
-dict_oracle = set([each for each in dict_oracle if each != ''])
+dict_oracle_1 = open('./data/dict/dict_oracle_1.txt').read().split('\n')
+dict_oracle_1 = [each.strip() for each in dict_oracle_1]
+dict_oracle_1 = set([each for each in dict_oracle_1 if each != ''])
+
+dict_oracle_2 = open('./data/dict/dict_oracle_2.txt').read().split('\n')
+dict_oracle_2 = [each.strip() for each in dict_oracle_2]
+dict_oracle_2 = set([each for each in dict_oracle_2 if each != ''])
+
+dict_oracle = dict_oracle_1 | dict_oracle_2
 
 remove_city = open('./data/dict/remove_city.txt').read().split('\n')
 remove_city = [each.strip() for each in remove_city]
@@ -15,28 +21,34 @@ remove_train = open('./data/dict/remove_train.txt').read().split('\n')
 remove_train = [each.strip() for each in remove_train]
 remove_train = set([each for each in remove_train if each != ''])
 
+computer = open('./data/dict/computer.txt').read().split('\n')
+computer = [each.strip() for each in computer]
+computer = set([each for each in computer if each != ''])
+computer = set()
+
 dict_known = open('./data/dict/dict_known.txt').read().split('\n')
 dict_known = [each.strip() for each in dict_known]
 dict_known = set([each for each in dict_known if each != ''])
+dict_known = dict_known - computer
 
-bio_train = open('./data/dict/bio_train.txt').read().split('\n')
+bio_train = open('./data/dict/bio_train_1.txt').read().split('\n')
 bio_train = [each.strip() for each in bio_train]
 bio_train = set([each for each in bio_train if each != ''])
 
-remove_select = set(open('./data/dict/remove_select.txt').read().split('\n'))
-if '' in remove_select: remove_select.remove('')
+bio_none = set(open('./data/dict/bio_none.txt').read().split('\n'))
+bio_none = [each.strip() for each in bio_none]
+bio_none = set([each for each in bio_none if each != ''])
+bio_none = bio_none - dict_oracle
 
-train_text = codecs.open('./data/Train_Data.csv').read()
 
-extra = list(remove_select - dict_oracle - remove_city - remove_train -dict_known)
-extra.sort(key=lambda k: (k, len(k)))
 
-tmp = []
-print(len(remove_train))
-print(len(extra))
-for each in extra:
-    # if each in train_text:
-    print(each)
+
+# tmp = []
+# print(len(remove_train))
+# print(len(extra))
+# for each in extra:
+#     # if each in train_text:
+#     print(each)
 
 
 # tmp=list(a-dict_oracle)
@@ -45,45 +57,7 @@ for each in extra:
 # for each in tmp:
 #     print(each)
 # print(len(tmp))
-# def get_sentences(text, max_length=512):
-#     # if len(text) <= max_length - 2:
-#     #     return [text]
-#     tmp = re.split('(。|！|？|；|，|\?|\!)', text)
-#     sent = ''
-#     sentences = []
-#     if tmp[-1] != '':
-#         tmp.append('。')
-#     else:
-#         tmp = tmp[:-1]
-#
-#     i = 0
-#     while i < len(tmp) - 1:
-#         if len(tmp[i] + tmp[i + 1]) > max_length - 2:
-#             if sent != '':
-#                 sentences.append(sent)
-#             x = tmp[i] + tmp[i + 1]
-#             pieces = [x[i:i + max_length - 2] for i in range(0, len(x), max_length - 2)]
-#             sentences.extend(pieces)
-#             i += 2
-#             sent = ''
-#             continue
-#         if len(sent + tmp[i] + tmp[i + 1]) > max_length - 2:
-#             sentences.append(sent)
-#             sent = ''
-#             i += 2
-#             continue
-#         sent += (tmp[i] + tmp[i + 1])
-#         i += 2
-#
-#     if sent != '':
-#         sentences.append(sent)
-#
-#     return sentences
-#
-#
-# a='【】点击上方蓝色字体免费关注（别私存，快给朋友们看看，多一个人看到少一个人受害！）警惕：163家消费全返（返利）传销骗局名单曝光，已有人倾家荡产！提醒亲朋好友千万别碰点点啦聚赢宝云集品云联惠心未来得来惠零零购利客购7号网信优惠美芝妮洄游客匀加速微客谷喇叭客聚富网云吃货商城天添薪益杞来大星白云零购未来梦壹购物极之道跨界通我来买乐赚惠一指淘e多购白贝购万商惠哪划算爱利购优卡特全返通多可丽金粉团唯宝汇乐宜购淘丰乐德信美兑乐购商城乐采商城胖胖生活利人商城万金商城万聚商盟人人快购未来商城乐享无忧聚商一百云圈商城福泽天下瑞丰集团货通天下黎民商城德通天下全返时代大白军团浩沅云商乐享无忧全惠商城MT电商聚商一百乐福全返互联宝宝嘀的商城返本商城一淘云购吧娜科技云惠天下车房时代优返商城亿联数贸春媛商城智道百业帝峰商城云龙易购云梦生活E道商城无界生活万商昭和江苏皇缘人人公益易迅惠民大唐天下中佳易购城邦商城宝微商城壹号商圈宝微商城趣购商城众和乐购乐活无界沃佳商城博邦商城无上商城千度网购我的未来网爱尚购物网购实惠云商同城优速购珍优福商城鑫易鑫商贸白拿白送网中天国际城时尚365辰旭商务网随9快易购百姓创富汇美乐购商城创客920万品换购网V8同城汇趣购购物商城51天天乐购珠峰购物商城百姓乐购商城山东通购购物深圳无界珠宝贪猫值换平台恩威道源商城聪慧健康产业知启消费全返道吉生态平台三古汇云生活乐活积分平台vce一卡通超越未来超市融城全返商城缪迪得一容易德信返利超市高新惠好超市优狐消费服务网腾云消费服务网江苏圣迪雅集团合赢消费创富网翱圣搭伙O2O利利购全返购物九丰消费服务网玉聚缘全返商城河北众智云平台丙丙卷支付全返云消费全返大系统旭日东升全返商城生活百需消费全返天地物联消费全返创客优品汇免费购物商城礼部尚品商家联盟一卡通青云百货消费全返平台易返云商消费全返平台提醒大家⊙以后一定要擦亮眼睛！千万别相信购物全额报销！天上不会掉馅饼！！！贪心害死人！传出去，别再让你的家人、朋友被骗了!'
-# b = get_sentences(a)
-# c = 1
+
 
 # remove = set(open('./data/dict/remove_select.txt').read().split('\n'))
 # if '' in remove: remove.remove('')
@@ -132,7 +106,8 @@ for each in extra:
 # except:
 #     pass
 
-# a = open('./res/post_results.csv', encoding='utf-8').read().split('\n')
+"""extra"""
+# a = open('./res/results.csv', encoding='utf-8').read().split('\n')
 # b = open('./res/best.csv', encoding='utf-8').read().split('\n')
 # with open('./res/extra.csv', 'w', encoding='utf-8') as f:
 #     f.write('id,unknownEntities\n')
@@ -151,6 +126,8 @@ for each in extra:
 #         a_entities = a_entities.split(';')
 #         b_entities = b_entities.split(';')
 #         entities = set(a_entities) - set(b_entities)
+#         if len(entities) == 0:
+#             continue
 #         f.write('%s,%s\n' % (a_id, ';'.join(list(entities))))
 
 # def judge_pure_english(keyword):
@@ -199,7 +176,7 @@ for each in extra:
 # a = sorted(a,key=lambda k: (len(k),k))
 # print(len(a))
 
-# with open(r'C:\Users\Houking\Desktop\label\bio_train.txt', 'w', encoding='utf-8') as f:
+# with open(r'C:\Users\Houking\Desktop\label\bio_train_1.txt', 'w', encoding='utf-8') as f:
 #     for each in a:
 #         f.write(each+'\n')
 

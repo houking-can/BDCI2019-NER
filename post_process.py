@@ -5,9 +5,15 @@ import os
 from tqdm import tqdm
 from collections import Counter
 
-dict_oracle = open('./data/dict/dict_oracle.txt').read().split('\n')
-dict_oracle = [each.strip() for each in dict_oracle]
-dict_oracle = set([each for each in dict_oracle if each != ''])
+dict_oracle_1 = open('./data/dict/dict_oracle_1.txt').read().split('\n')
+dict_oracle_1 = [each.strip() for each in dict_oracle_1]
+dict_oracle_1 = set([each for each in dict_oracle_1 if each != ''])
+
+dict_oracle_2 = open('./data/dict/dict_oracle_2.txt').read().split('\n')
+dict_oracle_2 = [each.strip() for each in dict_oracle_2]
+dict_oracle_2 = set([each for each in dict_oracle_2 if each != ''])
+
+dict_oracle = dict_oracle_1 | dict_oracle_2
 
 remove_city = open('./data/dict/remove_city.txt').read().split('\n')
 remove_city = [each.strip() for each in remove_city]
@@ -17,21 +23,33 @@ remove_train = open('./data/dict/remove_train.txt').read().split('\n')
 remove_train = [each.strip() for each in remove_train]
 remove_train = set([each for each in remove_train if each != ''])
 
+# computer = open('./data/dict/computer.txt').read().split('\n')
+# computer = [each.strip() for each in computer]
+# computer = set([each for each in computer if each != ''])
+
+bio_remove = open('./data/dict/bio_remove.txt').read().split('\n')
+bio_remove = [each.strip() for each in bio_remove]
+bio_remove = set([each for each in bio_remove if each != ''])
+
 dict_known = open('./data/dict/dict_known.txt').read().split('\n')
 dict_known = [each.strip() for each in dict_known]
 dict_known = set([each for each in dict_known if each != ''])
+dict_known = dict_known | bio_remove
 
-bio_train = open('./data/dict/bio_train.txt').read().split('\n')
+bio_train = open('./data/dict/bio_train_1.txt').read().split('\n')
 bio_train = [each.strip() for each in bio_train]
 bio_train = set([each for each in bio_train if each != ''])
 
-remove_select = set(open('./data/dict/remove_select.txt').read().split('\n'))
-if '' in remove_select: remove_select.remove('')
+# remove_select = set(open('./data/dict/remove_select.txt').read().split('\n'))
+# if '' in remove_select: remove_select.remove('')
 
 completion_words = codecs.open('./data/dict/completion_words.txt').read().split('\n')
 completion_words = [each.strip() for each in completion_words if each != '']
 completion_words = list(set(completion_words))
 completion_words.sort(key=lambda k: len(k), reverse=True)
+
+multi_completion_words = [w for w in completion_words if len(w) >= 2]
+wrong_ends = ['（死亡）', '（关网）', '（跑路）', '（崩盘）', '（清盘）', '（挣扎中）', '（被打击）', '（双赢）', '（消失）', '（提现困难）']
 
 
 def filter_word(w):
@@ -43,8 +61,8 @@ def filter_word(w):
     if re.findall("\\" + "|\\".join(add_char), w):
         return ''
 
-    if 'CEO' in w:
-        w = w.replace('CEO', '')
+    # if 'CEO' in w:
+    #     w = w.replace('CEO', '')
     w = w.strip('-')
 
     if w.isnumeric():
@@ -179,6 +197,15 @@ def check_punctuations(w, context):
             cnt_english += 1
         elif c == ')':
             cnt_english -= 1
+    if w.endswith('“”') or w.endswith('‘’'):
+        w = w[:-2]
+    if w.startswith('“”') or w.startswith('“”'):
+        w = w[2:]
+
+    if w.endswith('（）') or w.endswith('()'):
+        w = w[:-2]
+    if w.startswith('（）') or w.startswith('()'):
+        w = w[2:]
 
     if cnt_chinese == 0 and cnt_english == 0 and cnt_double == 0 and cnt_single == 0:
         return w
@@ -230,6 +257,26 @@ def verify_entity(candidates, context):
             continue
         elif entity.startswith('山寨'):
             continue
+        elif '和' in entity:
+            index = entity.find('和')
+            if index > 0 and index < len(entity) - 1:
+                if judge_alpha(entity[index - 1]) and judge_alpha(entity[index + 1]):
+                    res.append(entity[:index])
+                    res.append(entity[index + 1:])
+                    continue
+                if judge_ends(entity[:index], multi_completion_words):
+                    res.append(entity[:index])
+                    res.append(entity[index + 1:])
+                    continue
+        elif entity.endswith('主') and entity + '网' in context:
+            entity = entity[:-1]
+        if entity.count('-') >= 2:
+            continue
+        for wrong in wrong_ends:
+            if entity.endswith(wrong):
+                index = entity.find(wrong)
+                entity = entity[:index]
+                break
         res.append(entity)
 
     candidates = [e for e in res if e != '']
@@ -246,7 +293,7 @@ def verify_entity(candidates, context):
     return res
 
 
-def judge_ends(entity):
+def judge_ends(entity, completion_words):
     for word in completion_words:
         if entity.endswith(word):
             return True
@@ -279,7 +326,7 @@ def complement_entity(entity, context):
     :return:
     """
     # 如果实体结尾为公司，国际，控股等直接返回
-    if judge_ends(entity):
+    if judge_ends(entity, completion_words):
         return [entity]
 
     # 补全实体前后的英文
@@ -298,53 +345,70 @@ def complement_entity(entity, context):
                 continue
             tmp = entity + context[index + len(entity):i]
             if tmp.lower().endswith('app'):
-
                 if context.count(tmp) == context.count(tmp[:-3]):
                     # print(1, entity, tmp)
                     return [tmp]
                 # print(2, entity, tmp[:-3])
                 return [tmp[:-3]]
+            entity = tmp
             break
 
     # 补全中文后面的英文
-    start = index + len(entity)
-    if start < len(context) and judge_alpha(context[start]):
-        for i in range(start, len(context)):
-            if judge_alpha(context[i]):
-                continue
-            tmp = entity + context[index + len(entity):i]
-            if len(tmp) - len(entity) <= 1:
-                break
+    # start = index + len(entity)
+    # if start < len(context) and judge_alpha(context[start]):
+    #     for i in range(start, len(context)):
+    #         if judge_alpha(context[i]):
+    #             continue
+    #         tmp = entity + context[index + len(entity):i]
+    #         if len(tmp) - len(entity) <= 1:
+    #             break
+    #         entity = tmp
+    #         break
 
-            if tmp.lower().endswith('qq'):
-                break
-            if context.count(entity) == context.count(tmp):
-                # print(3, entity, tmp)
-                return [tmp]
-            elif tmp.lower().endswith('app'):
-                # print(4, entity, tmp[:-3])
-                return [tmp[:-3]]
-
-            break
+    # if tmp.lower().endswith('qq'):
+    #     break
+    #
+    # cnt = context.count(entity)
+    # if cnt == context.count(tmp):
+    #     # print(3, entity, tmp)
+    #     if cnt == 1:
+    #         break
+    #     return [tmp]
+    # if tmp.lower().endswith('app'):
+    #     # print(4, entity, tmp[:-3])
+    #     return [tmp[:-3]]
+    #
+    # break
 
     # 补全中文前面的英文
-    start = index - 1
-    if start >= 0 and judge_alpha(context[start]):
-        for i in range(start, -1, -1):
-            if judge_alpha(context[i]):
-                continue
-
-            tmp = context[i + 1:index] + entity
-            if len(tmp) - len(entity) <= 1:
-                break
-
-            if context[i + 1:index].lower() in ['app', 'cn', 'ceo', 'com']:
-                break
-
-            if context.count(entity) == context.count(tmp):
-                # print(3, entity, tmp)
-                return [tmp]
-            break
+    # start = index - 1
+    # if start >= 0 and judge_alpha(context[start]):
+    #     for i in range(start, -1, -1):
+    #         if judge_alpha(context[i]):
+    #             continue
+    #
+    #         tmp = context[i + 1:index] + entity
+    #         if len(tmp) - len(entity) <= 1:
+    #             break
+    #         entity = tmp
+    #         # if context[i + 1:index].lower() in ['app', 'cn', 'ceo', 'com']:
+    #         #     break
+    #         #
+    #         # if context.count(entity) == context.count(tmp):
+    #         #     # print(3, entity, tmp)
+    #         #     return [tmp]
+    #         # break
+    # words = []
+    # start = 0
+    # for i in range(len(entity)):
+    #     if i + 1 < len(entity) and judge_alpha(entity[i]) and not judge_alpha(entity[i + 1]):
+    #         words.append(entity[start:i + 1])
+    #         start = i + 1
+    #         continue
+    #     if i + 1 < len(entity) and not judge_alpha(entity[i]) and judge_alpha(entity[i + 1]):
+    #         words.append(entity[start:i + 1])
+    #         start = i + 1
+    # words.append(entity[start:])
 
     cnt = context.count(entity)
 
@@ -377,7 +441,7 @@ def complement_entity(entity, context):
     return [entity]
 
 
-def post_process(results_path, complete_path):
+def post_process(results_path, complete_path, context_file='./data/Round2_Test.csv'):
     """
     后处理部分
     :param filename:
@@ -393,12 +457,12 @@ def post_process(results_path, complete_path):
 
     res.write('id,unknownEntities\n')
 
-    with open('./data/Test_Data.csv', 'r', encoding='utf-8') as myFile:
+    with open(context_file, 'r', encoding='utf-8') as myFile:
         lines = list(csv.reader(myFile))
         if lines[-1] == '':
             lines = lines[:-1]
-        # for i in tqdm(range(1, len(lines))):
-        for i in range(1, len(lines)):
+        for i in tqdm(range(1, len(lines))):
+            # for i in range(1, len(lines)):
             id, candidates = results[i].split(',')
             if candidates == '':
                 entity = []
@@ -492,10 +556,12 @@ def is_known(entity):
         return True
     # 机构简称开头的实体可认为也是已知实体，需要去除
     for word in dict_known:
-        if len(word) == 2:
-            if entity.startswith(word):
-                return True
-        elif word in entity:
+        # if len(word) == 2:
+        #     if entity.startswith(word):
+        #         return True
+        # elif word in entity:
+        #     return True
+        if len(word) > 2 and word in entity:
             return True
 
     return False
@@ -515,12 +581,12 @@ def remove_entity(post_path, res_path):
         results = results[:-1]
     res = codecs.open(res_path, 'w')
     res.write('id,unknownEntities\n')
-    # train_text = codecs.open('./data/Train_Data.csv').read()
+    # train_text = codecs.open('./data/none.csv').read()
 
     tmp = set()
     cnt = 0
 
-    remove_set = dict_oracle | remove_city | remove_train
+    remove_set = dict_oracle | remove_city
     for line in tqdm(results[1:]):
         if ',' in line:
             id, entities = line.split(',')
@@ -534,14 +600,20 @@ def remove_entity(post_path, res_path):
 
                 if should_remove(entity, entities):
                     continue
-                if entity in remove_select:
+                if entity in remove_train:
                     tmp.add(entity)
                     cnt += 1
                     continue
+                # if entity in remove_select:
+                #     tmp.add(entity)
+                #     cnt += 1
+                #     continue
 
                 # if entity in train_text:
                 #     tmp.add(entity)
                 #     cnt += 1
+                # if entity in train_text:
+                #     continue
                 candidates.append(entity)
 
             res.write('%s,%s\n' % (id, ';'.join(candidates)))
@@ -568,29 +640,42 @@ def count_entity(filename):
         tmp.extend(entities)
 
     # tmp = list(set(tmp))
-
+    # train_text_1 = codecs.open('./data/Round1_Train.csv').read()
+    # train_text_2 = codecs.open('./data/Round2_Train.csv').read()
+    # train_text = codecs.open('./data/none.csv').read()
     tmp.sort(key=lambda k: (k, len(k)))
+
     C = list(Counter(tmp).items())
-    C.sort(key=lambda k: (k[1], k, len(k)), reverse=True)
+    # C.sort(key=lambda k: (k[1], k, len(k)), reverse=True)
+    C.sort(key=lambda k: k[0])
     xx = []
     # cnt=0
-    for each in C:
+    cnt = 0
+    for each in tqdm(C):
         if each[0] != '':
             # if each[0] != '' and each[0] in train_text and len(each[0]) < 3 and each[1] >=3:
+            # if each[0] in train_text:
             xx.append(each[0] + ' ' + str(each[1]))
+            cnt += each[1]
             # cnt+=each[1]
             # xx.append(each[0])
-    # print(cnt)
+    print(cnt)
     with open('./res/entities.txt', 'w', encoding='utf-8') as f:
         f.write('\n'.join(xx))
 
 
 if __name__ == "__main__":
+    # gen test
     results_path = './res/predict_results.csv'
     post_path = './res/post_results.csv'
     res_path = './res/results.csv'
     # gen_csv('./output/label_test.txt', results_path)
-
-    # post_process(results_path, post_path)
+    post_process(results_path, post_path, context_file='./data/Round2_Test.csv')
     remove_entity(post_path, res_path)
     count_entity(res_path)
+
+    # gen train
+    # results_path = './res/train_results.csv'
+    # post_path = './res/post_train_results.csv'
+    # gen_csv('./data/train.txt', results_path)
+    # post_process(results_path, post_path, mode="Train")

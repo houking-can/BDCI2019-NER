@@ -29,6 +29,8 @@ from bert_base.bert import tokenization
 from bert_base.train.models import create_model, InputFeatures, InputExample
 from bert_base.server.helper import set_logger
 
+from tqdm import tqdm
+
 __version__ = '0.1.0'
 
 __all__ = ['__version__', 'DataProcessor', 'NerProcessor', 'write_tokens', 'convert_single_example',
@@ -667,7 +669,7 @@ def train(args):
         output_predict_file = os.path.join(args.output_dir, "label_test.txt")
 
         def result_to_pair(writer):
-            for predict_line, prediction in zip(predict_examples, result):
+            for predict_line, prediction in tqdm(zip(predict_examples, result), total=len(predict_examples)):
                 idx = 0
                 line = ''
                 line_token = str(predict_line.text).split(' ')
